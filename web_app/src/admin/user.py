@@ -1,7 +1,7 @@
 # Внешние зависимости
 from sqladmin import ModelView
 from wtforms import PasswordField, SelectField
-from wtforms.validators import DataRequired, ValidationError
+from wtforms.validators import DataRequired, ValidationError, Email
 import bcrypt  # или другой хэширующий алгоритм
 # Внутренние модули
 from web_app.src.models import User, UserRole, ROLE_LABELS
@@ -28,7 +28,8 @@ class UserAdmin(ModelView, model=User):
     }
 
     column_formatters_detail = {
-        User.last_login: lambda m, a: m.last_login.strftime("%d.%m.%Y %H:%M") if m.last_login else "Не заходил"
+        User.last_login: lambda m, a: m.last_login.strftime("%d.%m.%Y %H:%M") if m.last_login else "Не заходил",
+        User.role: lambda m, a: ROLE_LABELS.get(m.role, m.role.value)
     }
 
     form_create_rules = [
@@ -51,6 +52,7 @@ class UserAdmin(ModelView, model=User):
         },
         'email': {
             'label': 'Электронная почта',
+            'validators': [DataRequired(), Email()],
             'description': 'Напишите вашу электронную почту'
         },
         'password_hash': {
@@ -72,18 +74,29 @@ class UserAdmin(ModelView, model=User):
 
     # При создании пользователя
     async def on_model_change(self, data, model, is_created, request):
+        if 'full_name' in data:
+            data['full_name'] = data['full_name'].lower()
+            full_name_list = data['full_name'].split(' ')
+            if len(full_name_list) > 1:
+                data['full_name'] = ' '.join(string.capitalize() for string in full_name_list)
+
+            else:
+                raise ValidationError(f"Неправильный формат ФИО: '{data['full_name']}'")
+
         # Проверка уникальности username
         if 'username' in data:
+            data['username'] = data['username'].lower()
             existing = await sql_chek_existing_user_by_name(data['username'])
             if is_created:
                 if existing is not None:
-                    raise ValidationError(f"Username '{data['username']}' уже существует")
+                    raise ValidationError(f"Уникальное имя '{data['username']}' уже существует")
             else:
                 if model.id != existing:
-                    raise ValidationError(f"Username '{data['username']}' уже занят")
+                    raise ValidationError(f"Уникальное имя '{data['username']}' уже занят")
 
         # Проверка уникальности email
         if 'email' in data:
+            data['email'] = data['email'].lower()
             existing = await sql_chek_existing_user_by_email(data['email'])
             if is_created:
                 if existing is not None:
