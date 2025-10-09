@@ -78,7 +78,11 @@ class Item(Base):
         "Category",
         back_populates="items"
     )
-
+    bids: so.Mapped[List["Bid"]] = so.relationship(
+        "Bid",
+        back_populates="item"
+    )
+    
     def __repr__(self):
         return f"<Item(id={self.id}, serial='{self.serial_number}', name='{self.name}')>"
 

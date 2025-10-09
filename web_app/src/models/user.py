@@ -1,11 +1,10 @@
 # Внешние зависимости
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 import enum
 import sqlalchemy as sa
 import sqlalchemy.orm as so
 from sqlalchemy import nullsfirst
-
 # Внутренние модули
 from web_app.src.models.base import Base
 
@@ -58,6 +57,12 @@ class User(Base):
         index=True,
         default=UserRole.EMPLOYEE
     )
+    is_active: so.Mapped[bool] = so.mapped_column(
+        sa.Bolean,
+        nullable=False,
+        index=True,
+        default=True
+    )
     last_login: so.Mapped[Optional[datetime]] = so.mapped_column(
         sa.DateTime(timezone=True),
         nullable=True
@@ -97,7 +102,11 @@ class User(Base):
         uselist=False,
         cascade="all, delete-orphan"
     )
-
+    bids: so.Mapped[List["Bid"]] = so.mapped_column(
+        "Bid",
+        back_populates="user"
+    )
+    
     def __repr__(self):
         return f"<User(id={self.id}, username='{self.username}', role='{self.role.value}')>"
 
