@@ -1,3 +1,5 @@
+from turtledemo.sorting_animate import start_ssort
+
 data = {
     "КАНЦЕЛЯРСКИЕ ТОВАРЫ": [
         {
@@ -753,7 +755,7 @@ data = {
             "name": "Государственный герб Российской Федерации",
             "description": ""
         },
-{
+        {
             "serial": 150,
             "name": "Герб Санкт-Петербурга",
             "description": ""
@@ -775,83 +777,40 @@ data = {
         },
         {
             "serial": 154,
-            "name": "",
-            "description": ""
-        },
-{
-            "serial": 105,
-            "name": "",
+            "name": "Кронштейн для крепления флагов на фасад здания",
             "description": ""
         },
         {
-            "serial": 106,
-            "name": "",
-            "description": ""
-        },
-        {
-            "serial": 107,
-            "name": "",
-            "description": ""
-        },
-        {
-            "serial": 108,
-            "name": "",
-            "description": ""
-        },
-        {
-            "serial": 109,
-            "name": "",
-            "description": ""
-        },
-{
-            "serial": 105,
-            "name": "",
-            "description": ""
-        },
-        {
-            "serial": 106,
-            "name": "",
-            "description": ""
-        },
-        {
-            "serial": 107,
-            "name": "",
-            "description": ""
-        },
-        {
-            "serial": 108,
-            "name": "",
-            "description": ""
-        },
-        {
-            "serial": 109,
-            "name": "",
-            "description": ""
-        },
-{
-            "serial": 105,
-            "name": "",
-            "description": ""
-        },
-        {
-            "serial": 106,
-            "name": "",
-            "description": ""
-        },
-        {
-            "serial": 107,
-            "name": "",
-            "description": ""
-        },
-        {
-            "serial": 108,
-            "name": "",
-            "description": ""
-        },
-        {
-            "serial": 109,
-            "name": "",
-            "description": ""
+            "serial": 155,
+            "name": "Мантия судьи",
+            "description": "(комплект)"
         },
     ]
 }
+
+from web_app.src.models import Category, Item
+from web_app.src.core import connection
+import asyncio
+
+@connection
+async def write_data_in_db(session):
+    for key, items in data.items():
+        new_category = Category(name=key)
+        session.add(new_category)
+        await session.flush()
+        await session.refresh(new_category)
+
+        for item in items:
+            new_item = Item(
+                serial_number=str(item["serial"]),
+                name=item["name"],
+                description=item["description"],
+                category_id=new_category.id
+            )
+            session.add(new_item)
+
+    await session.commit()
+
+
+if __name__ == "__main__":
+    asyncio.run(write_data_in_db())

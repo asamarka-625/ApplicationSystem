@@ -4,8 +4,9 @@ from wtforms import PasswordField, SelectField
 from wtforms.validators import DataRequired, ValidationError, Email
 import bcrypt  # или другой хэширующий алгоритм
 # Внутренние модули
-from web_app.src.models import User, UserRole, ROLE_LABELS
+from web_app.src.models import User, ROLE_MAPPING
 from web_app.src.crud import sql_chek_existing_user_by_name, sql_chek_existing_user_by_email
+from web_app.src.utils import validate_phone_from_form
 
 
 class UserAdmin(ModelView, model=User):
@@ -16,7 +17,10 @@ class UserAdmin(ModelView, model=User):
         User.username: "Имя пользователя",
         User.full_name: "ФИО",
         User.email: "Email",
-        User.last_login: "Последняя дата входа"
+        User.position: "Должность",
+        User.phone: "Номер телефона",
+        User.last_login: "Последняя дата входа",
+        User.is_active: "Статус"
     }
 
     column_searchable_list = [User.full_name] # список столбцов, которые можно искать
@@ -24,12 +28,13 @@ class UserAdmin(ModelView, model=User):
     column_default_sort = [(User.id, True)]
 
     column_formatters = {
-        User.role: lambda m, a: ROLE_LABELS.get(m.role, m.role.value)
+        User.role: lambda m, a: m.role.value.capitalize() if m.role else ''
     }
 
     column_formatters_detail = {
-        User.last_login: lambda m, a: m.last_login.strftime("%d.%m.%Y %H:%M") if m.last_login else "Не заходил",
-        User.role: lambda m, a: ROLE_LABELS.get(m.role, m.role.value)
+        User.role: lambda m, a: m.role.value.capitalize() if m.role else '',
+        User.is_active: lambda m, a: "Активен" if m.is_active else "Неактивен",
+        User.last_login: lambda m, a: m.last_login.strftime("%d.%m.%Y %H:%M") if m.last_login else "Не заходил"
     }
 
     form_create_rules = [
@@ -37,12 +42,16 @@ class UserAdmin(ModelView, model=User):
         'full_name',
         'email',
         'password_hash',
-        'role'
+        'role',
+        'position',
+        'phone',
+        'is_active'
     ]
     # Добавляем виртуальное поле password
     form_overrides = {
         'password_hash': PasswordField,
-        'role': SelectField
+        'role': SelectField,
+        'is_active': SelectField
     }
 
     form_args = {
@@ -67,8 +76,30 @@ class UserAdmin(ModelView, model=User):
         'role': {
             'label': 'Роль',
             'description': 'Выберите роль пользователя',
-            'choices': [(role.value, ROLE_LABELS[role]) for role in UserRole],
-            'coerce': lambda x: UserRole(x) if x else None
+            'choices': [
+                ('сотрудник комитета', 'Сотрудник комитета'),
+                ('сотрудник управления', 'Сотрудник управления'),
+                ('мировой судья', 'Мировой судья'),
+                ('секретарь суда', 'Секретарь суда'),
+                ('сотрудник фбу', 'Сотрудник ФБУ'),
+                ('исполнитель', 'Исполнитель')
+            ],
+            'coerce': lambda x: ROLE_MAPPING.get(x.lower())
+        },
+        'position': {
+            'label': 'Должность',
+            'description': 'Напишите вашу должность'
+        },
+        'phone': {
+            'label': 'Номер телефона',
+            'validators': [DataRequired(), validate_phone_from_form],
+            'description': 'Напишите ваш номер тедефона'
+        },
+        'is_active': {
+            'label': 'Статус',
+            'description': 'Выберите статус пользоваеля',
+            'choices': [("Активен", "Активен"), ("Неактивен", "Неактивен")],  # ИСПРАВЛЕНО
+            'coerce': lambda x: x == "Активен"
         }
     }
 
@@ -123,7 +154,10 @@ class UserAdmin(ModelView, model=User):
         User.username,
         User.role,
         User.email,
-        User.last_login
+        User.position,
+        User.phone,
+        User.last_login,
+        User.is_active
     ]
 
     form_edit_rules = [
@@ -131,21 +165,11 @@ class UserAdmin(ModelView, model=User):
         "email",
         "password_hash",
         "full_name",
-        "role"
+        "role",
+        "position",
+        "phone",
+        "is_active"
     ]
-
-    """
-    Сортировка по умолчанию, если не применяется сортировка,
-    тюльпан (колонка, is_danceding) или список пайка для нескольких столбцов
-    """
-    # column_filterable_list = [User.admin]
-
-    # column_exclude_list - список столбцов, которые должны быть исключены
-    # list_query - Метод с подписью (request) -> stmtкоторый может настроить запрос списка
-    # count_query - Метод с подписью (request) -> stmtкоторый может настроить запрос графа
-    # search_query - Метод с подписью (stmt, term) -> stmtкоторый может настроить поисковый запрос
-    # column_filters - Список объектов, которые реализуют ColumnFilter Протокол
-    # details_query - Метод с подписью (request) -> stmt, который может настроить детали запроса
 
     can_create = True # право создавать
     can_edit = True # право редактировать

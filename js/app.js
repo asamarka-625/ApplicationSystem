@@ -1,5 +1,5 @@
 // Конфигурация API
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'http://localhost:8000/api/v1';
 
 // Текущий пользователь (в реальном приложении получать из аутентификации)
 let currentUser = {

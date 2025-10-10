@@ -1,5 +1,5 @@
 # Внешние зависимости
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
@@ -59,6 +59,26 @@ async def sql_get_categories_choices(session: AsyncSession) -> List[Tuple[str, s
         )
 
         return [(str(cat.id), cat.name) for cat in categories_result.all()]
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error reading all categories: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error reading all categories: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
+
+
+# Получаем список категорий
+@connection
+async def sql_search_items(search: str, session: AsyncSession) -> List[Dict[str, str]]:
+    try:
+        names_result = await session.execute(
+            sa.select(Item.name)
+            .where(Item.name.ilike(f"%{search}%"))
+        )
+
+        return [{"name": name, "title": name} for name in names_result.scalars()]
 
     except SQLAlchemyError as e:
         config.logger.error(f"Database error reading all categories: {e}")

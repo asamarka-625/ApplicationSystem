@@ -5,6 +5,7 @@ import sqlalchemy as sa
 import sqlalchemy.orm as so
 # Внутренние модули
 from web_app.src.models.base import Base
+from web_app.src.models.table import request_item
 
 
 # Модель Категории
@@ -58,12 +59,6 @@ class Item(Base):
         nullable=False
     )
     description: so.Mapped[Optional[str]] = so.mapped_column(sa.Text, nullable=True)
-    category_id: so.Mapped[int] = so.mapped_column(
-        sa.Integer,
-        sa.ForeignKey('categories.id', ondelete='CASCADE'),
-        nullable=False,
-        index=True
-    )
     created_at: so.Mapped[datetime] = so.mapped_column(
         sa.DateTime(timezone=True),
         server_default=sa.func.now()
@@ -74,13 +69,23 @@ class Item(Base):
         nullable=True
     )
 
+    # Внешние ключи
+    category_id: so.Mapped[int] = so.mapped_column(
+        sa.Integer,
+        sa.ForeignKey('categories.id', ondelete='CASCADE'),
+        nullable=False,
+        index=True
+    )
+
+    # Связи
     category: so.Mapped["Category"] = so.relationship(
         "Category",
         back_populates="items"
     )
-    bids: so.Mapped[List["Bid"]] = so.relationship(
-        "Bid",
-        back_populates="item"
+    requests: so.Mapped[Optional[List["Request"]]] = so.relationship(
+        "Request",
+        secondary=request_item,
+        back_populates="items",
     )
     
     def __repr__(self):

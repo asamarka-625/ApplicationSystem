@@ -1,20 +1,125 @@
-// Загрузка судебных участков
+// Получаем элементы
+const searchInput = document.getElementById('requestTitle');
+const suggestionsContainer = document.getElementById('suggestions');
+
+// Накладываем событие на ввод с debounce
+let searchTimeout;
+searchInput.addEventListener('input', function(event) {
+    const searchTerm = event.target.value.trim();
+
+    // Очищаем предыдущий таймер
+    clearTimeout(searchTimeout);
+
+    // Если строка не пустая, отправляем запрос через 300ms
+    if (searchTerm.length > 2) {
+        searchTimeout = setTimeout(() => {
+            searchItems(searchTerm);
+        }, 300);
+    } else {
+        hideSuggestions();
+    }
+});
+
+// Функция для отправки запроса
+async function searchItems(query) {
+    try {
+        showLoading(true);
+        const response = await fetch(`${API_BASE_URL}/item/?search=${encodeURIComponent(query)}`);
+
+        if (!response.ok) {
+            throw new Error('Ошибка сети');
+        }
+
+        const results = await response.json();
+        displaySuggestions(results);
+
+    } catch (error) {
+        console.error('Ошибка поиска:', error);
+        hideSuggestions();
+    } finally {
+        showLoading(false);
+    }
+}
+
+// Функция для отображения подсказок
+function displaySuggestions(items) {
+    if (!items || items.length === 0) {
+        hideSuggestions();
+        return;
+    }
+
+    const suggestionsHTML = items.map(item => `
+        <div class="suggestion-item" data-value="${item.title || item.name}">
+            ${item.title || item.name}
+        </div>
+    `).join('');
+
+    suggestionsContainer.innerHTML = suggestionsHTML;
+    suggestionsContainer.style.display = 'block';
+}
+
+// Функция для скрытия подсказок
+function hideSuggestions() {
+    suggestionsContainer.style.display = 'none';
+}
+
+// Обработчик клика по подсказке
+suggestionsContainer.addEventListener('click', function(event) {
+    if (event.target.classList.contains('suggestion-item')) {
+        const value = event.target.getAttribute('data-value');
+        searchInput.value = value;
+        hideSuggestions();
+    }
+});
+
+// Скрываем подсказки при клике вне input
+document.addEventListener('click', function(event) {
+    if (!searchInput.contains(event.target) && !suggestionsContainer.contains(event.target)) {
+        hideSuggestions();
+    }
+});
+
+// Дополнительные обработчики для клавиатуры
+searchInput.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        hideSuggestions();
+    }
+});
+
+// Функции для индикации загрузки (заглушки)
+function showLoading(show) {
+    // Реализуйте отображение индикатора загрузки
+    if (show) {
+        console.log('Показываем загрузку...');
+    } else {
+        console.log('Скрываем загрузку...');
+    }
+}
+
 async function loadJudicialSites() {
     try {
-        // В реальном приложении - запрос к API
-        const judicialSites = [
-            { id: 1, address: 'ул. Примерная, д. 1', site_number: 'Участок №1' },
-            { id: 2, address: 'ул. Образцовая, д. 2', site_number: 'Участок №2' },
-            // ... больше участков
-        ];
-        
-        const select = document.getElementById('judicialSite');
-        judicialSites.forEach(site => {
+        const response = await fetch(`${API_BASE_URL}/request/info`);
+        const data = await response.json();
+        console.log(data);
+        const info = data.departament;
+        const request_type = data.request_type;
+
+        const select1 = document.getElementById('judicialSite');
+        info.forEach(site => {
             const option = document.createElement('option');
-            option.value = site.id;
-            option.textContent = `${site.site_number} - ${site.address}`;
-            select.appendChild(option);
+            option.value = site.code;
+            option.textContent = site.name;
+            select1.appendChild(option);
         });
+
+        const select2 = document.getElementById('requestType');
+        request_type.forEach(site => {
+            const option = document.createElement('option');
+            option.value = site;
+            option.textContent = site;
+            select2.appendChild(option);
+        });
+
     } catch (error) {
         console.error('Ошибка загрузки судебных участков:', error);
         showNotification('Ошибка загрузки справочников', 'error');

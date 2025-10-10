@@ -39,6 +39,8 @@ class CategoryAdmin(ModelView, model=Category):
 
         return await super().on_model_change(data, model, is_created, request)
 
+    column_details_list = [Category.id, Category.name]
+
     form_edit_rules = [
         "name"
     ]
@@ -46,7 +48,7 @@ class CategoryAdmin(ModelView, model=Category):
     can_create = True # право создавать
     can_edit = True # право редактировать
     can_delete = True # право удалять
-    can_view_details = False # право смотреть всю информацию
+    can_view_details = True # право смотреть всю информацию
     can_export = True # право экспортировать
 
     name = "Категория" # название

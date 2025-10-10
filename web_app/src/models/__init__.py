@@ -1,5 +1,7 @@
 from web_app.src.models.base import Base
-from web_app.src.models.user import (UserRole, User, EmployeeProfile, JudgeProfile,
-                                     EngineerProfile, AdminProfile, ROLE_LABELS)
+from web_app.src.models.user import UserRole, ROLE_MAPPING, User
 from web_app.src.models.product import Category, Item
-from web_app.src.models.bid import Bid
+from web_app.src.models.request import (Request, RequestType, RequestStatus, STATUS_MAPPING,
+                                        TYPE_MAPPING, RequestHistory, RequestDocument)
+from web_app.src.models.table import request_item
+from web_app.src.models.organization import Department
