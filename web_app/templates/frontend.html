@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Система управления заявками мировых судей</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/styles.css')}}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Шапка -->
+    <header class="header">
+        <div class="header-container">
+            <div class="logo">
+                <i class="fas fa-balance-scale"></i>
+                <span>Система мировых судей</span>
+            </div>
+            <div class="user-info">
+                <span id="userName">Иванов И.И.</span>
+                <div class="user-role" id="userRole">Мировой судья</div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Боковая панель -->
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="nav-item active">
+                        <a href="#dashboard" class="nav-link">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Дашборд</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#requests" class="nav-link">
+                            <i class="fas fa-list-alt"></i>
+                            <span>Мои заявки</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#create-request" class="nav-link">
+                            <i class="fas fa-plus-circle"></i>
+                            <span>Создать заявку</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#statistics" class="nav-link">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>Статистика</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#calendar" class="nav-link">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>Календарь</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#references" class="nav-link">
+                            <i class="fas fa-book"></i>
+                            <span>Справочники</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Основной контент -->
+        <main class="main-content">
+            <!-- Дашборд -->
+            <section id="dashboard" class="content-section active">
+                <div class="section-header">
+                    <h1>Дашборд</h1>
+                    <div class="emergency-alert" id="emergencyAlert" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Есть аварийные заявки!</span>
+                    </div>
+                </div>
+                
+                <div class="stats-cards">
+                    <div class="stat-card">
+                        <div class="stat-icon total">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="totalRequests">0</h3>
+                            <p>Всего заявок</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon completed">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="completedRequests">0</h3>
+                            <p>Выполнено</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon pending">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="pendingRequests">0</h3>
+                            <p>В работе</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon emergency">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="emergencyRequests">0</h3>
+                            <p>Аварийные</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-content">
+                    <div class="chart-container">
+                        <h3>Статистика по типам заявок</h3>
+                        <canvas id="requestsChart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <div class="recent-requests">
+                        <h3>Последние заявки</h3>
+                        <div id="recentRequestsList" class="requests-list">
+                            <!-- Список заявок будет загружен через JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Список заявок -->
+            <section id="requests" class="content-section">
+                <div class="section-header">
+                    <h1>Мои заявки</h1>
+                    <div class="filters">
+                        <select id="statusFilter">
+                            <option value="">Все статусы</option>
+                        </select>
+                        <select id="typeFilter">
+                            <option value="">Все типы</option>
+                        </select>
+                        <button class="btn btn-secondary" onclick="exportToExcel()">
+                            <i class="fas fa-file-excel"></i> Экспорт в Excel
+                        </button>
+                    </div>
+                </div>
+
+                <div class="requests-table-container">
+                    <table class="requests-table">
+                        <thead>
+                            <tr>
+                                <th>№ заявки</th>
+                                <th>Тип</th>
+                                <th>Предметы</th>
+                                <th>Статус</th>
+                                <th>Дата создания</th>
+                                <th>Срок</th>
+                            </tr>
+                        </thead>
+                        <tbody id="requestsTableBody">
+                            <!-- Данные будут загружены через JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Статистика -->
+            <section id="statistics" class="content-section">
+                <div class="section-header">
+                    <h1>Статистика</h1>
+                    <div class="period-selector">
+                        <select id="statsPeriod">
+                            <option value="week">Неделя</option>
+                            <option value="month" selected>Месяц</option>
+                            <option value="quarter">Квартал</option>
+                            <option value="year">Год</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stats-card large">
+                        <h3>Общая статистика выполнения</h3>
+                        <div class="completion-rate">
+                            <div class="rate-circle">
+                                <span id="completionRate">0%</span>
+                            </div>
+                            <div class="rate-details">
+                                <p>Выполнено: <span id="statsCompleted">0</span></p>
+                                <p>Всего: <span id="statsTotal">0</span></p>
+                                <p>В работе: <span id="statsPending">0</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stats-card">
+                        <h3>По типам заявок</h3>
+                        <div id="requestsByType" class="stats-list">
+                            <!-- Данные будут загружены через JavaScript -->
+                        </div>
+                    </div>
+
+                    <div class="stats-card">
+                        <h3>По исполнителям</h3>
+                        <div id="requestsByExecutor" class="stats-list">
+                            <!-- Данные будут загружены через JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Модальное окно для просмотра заявки -->
+    <div id="requestModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Детали заявки</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body" id="requestModalBody">
+                <!-- Содержимое будет загружено через JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Уведомления -->
+    <div id="notification" class="notification hidden">
+        <div class="notification-content">
+            <span id="notificationMessage"></span>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>	
+	<script src="{{ url_for('static', path='js/utils.js') }}"></script>
+	<script src="{{ url_for('static', path='js/app.js') }}"></script>
+	<script src="{{ url_for('static', path='js/requests.js') }}"></script>
+	<script src="{{ url_for('static', path='js/dashboard.js') }}"></script>
+</body>
+</html>

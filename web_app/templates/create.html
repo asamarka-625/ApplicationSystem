@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section id="create-request">
+	<div class="section-header">
+		<h1>Создание новой заявки</h1>
+	</div>
+	
+	<form id="requestForm" class="request-form">
+		<div class="form-section">
+			<h3>Основная информация</h3>
+			
+			<div class="form-group">
+				<label for="requestType">Тип заявки *</label>
+				<select id="requestType" name="requestTypeId" required>
+					<option value="">Выберите тип заявки</option>
+				</select>
+			</div>
+
+			<div class="form-group">
+				<label for="departamentSite">Судебный участок *</label>
+				<select id="departamentSite" name="departamentId" required>
+					<option value="">Выберите судебный участок</option>
+				</select>
+			</div>
+
+			<div class="form-group">
+				<label for="requestTitle">Предмет</label>
+				<input type="text" id="requestItem" name="itemId" required
+					   placeholder="Выберите предметы" autocomplete="off">
+				<div id="suggestions" class="suggestions-container"></div>
+			</div>
+
+			<div class="form-group">
+				<label for="requestDescription">Подробное описание *</label>
+				<textarea id="requestDescription" name="description" rows="5" required
+						  placeholder="Опишите подробно, что требуется сделать"></textarea>
+			</div>
+		</div>
+
+		<div class="form-section emergency-section" style="display: none;">
+			<h3><i class="fas fa-exclamation-triangle"></i> Аварийная ситуация</h3>
+			<div class="emergency-warning">
+				<p>Аварийные заявки оформляются только в отношении технического и эксплуатационного обслуживания зданий и помещений судебных участков.</p>
+			</div>
+		</div>
+
+		<div class="form-section">
+			<h3>Дополнительная информация</h3>
+			<div class="form-group">
+				<label for="attachments">Прикрепленные файлы</label>
+				<input type="file" id="attachments" name="attachments" multiple 
+					   accept=".jpg,.jpeg,.png,.pdf,.doc,.docx">
+				<small>Можно прикрепить фото, видео или документы</small>
+			</div>
+		</div>
+
+		<div class="form-actions">
+			<button class="btn btn-secondary" id="reset_create">Очистить</button>
+			<button class="btn btn-primary" id="sumbit_create">
+				<i class="fas fa-paper-plane"></i> Отправить заявку
+			</button>
+		</div>
+	</form>
+</section>
+{% endblock %}

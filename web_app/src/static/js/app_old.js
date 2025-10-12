@@ -57,38 +57,9 @@ function setupEventListeners() {
     // Обработка типа заявки для показа/скрытия аварийной секции
     document.getElementById('requestType').addEventListener('change', function() {
         const emergencySection = document.querySelector('.emergency-section');
-        const isEmergency = this.value === 'EMERGENCY';
+        const isEmergency = this.value === 'Аварийная';
         emergencySection.style.display = isEmergency ? 'block' : 'none';
     });
-}
-
-function showSection(sectionId) {
-    // Скрыть все секции
-    document.querySelectorAll('.content-section').forEach(section => {
-        section.classList.remove('active');
-    });
-    
-    // Показать выбранную секцию
-    document.getElementById(sectionId).classList.add('active');
-    
-    // Обновить активную ссылку в навигации
-    document.querySelectorAll('.nav-link').forEach(link => {
-        link.classList.remove('active');
-    });
-    document.querySelector(`[href="#${sectionId}"]`).classList.add('active');
-    
-    // Загрузить данные для секции
-    switch(sectionId) {
-        case 'dashboard':
-            loadDashboardData();
-            break;
-        case 'requests':
-            loadRequests();
-            break;
-        case 'statistics':
-            loadStatistics();
-            break;
-    }
 }
 
 function getUserRoleText(role) {
@@ -101,19 +72,6 @@ function getUserRoleText(role) {
         'COMMITTEE': 'Сотрудник комитета'
     };
     return roles[role] || role;
-}
-
-function showNotification(message, type = 'success') {
-    const notification = document.getElementById('notification');
-    const messageEl = document.getElementById('notificationMessage');
-    
-    messageEl.textContent = message;
-    notification.className = `notification ${type}`;
-    notification.classList.remove('hidden');
-    
-    setTimeout(() => {
-        notification.classList.add('hidden');
-    }, 5000);
 }
 
 // Утилитарные функции

@@ -2,10 +2,10 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-# from fastapi.staticfiles import StaticFiles
+from fastapi.staticfiles import StaticFiles
 from sqladmin import Admin
 # Внутренние модули
-from web_app.src.core import config, setup_database, engine
+from web_app.src.core import config, engine # , setup_database
 from web_app.src.routers import router
 from web_app.src.admin import (UserAdmin, ItemAdmin, CategoryAdmin,
                                DepartmentAdmin, RequestAdmin)
@@ -13,7 +13,7 @@ from web_app.src.admin import (UserAdmin, ItemAdmin, CategoryAdmin,
 
 async def startup():
     config.logger.info("Инициализируем базу данных...")
-    await setup_database()
+    # await setup_database()
 
 
 async def shutdown():
@@ -31,10 +31,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+app.mount("/static", StaticFiles(directory="web_app/src/static"), name="static")
+
 # Подключение маршрутов
 app.include_router(router)
-
-# app.mount("/static", StaticFiles(directory="web_app/src/static"), name="static")
 
 # Настройка CORS
 app.add_middleware(
