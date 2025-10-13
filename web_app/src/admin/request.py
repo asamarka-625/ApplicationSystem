@@ -4,7 +4,7 @@ from markupsafe import Markup
 from sqladmin import ModelView
 from wtforms import SelectField
 # Внутренние модули
-from web_app.src.models import Request, TYPE_MAPPING
+from web_app.src.models import Request
 
 
 class RequestAdmin(ModelView, model=Request):
@@ -94,7 +94,7 @@ class RequestAdmin(ModelView, model=Request):
                 ('эксплуатационное обслуживание', 'Эксплуатационное обслуживание'),
                 ('аварийная', 'Аварийная')
             ],
-            'coerce': lambda x: TYPE_MAPPING.get(x.lower())
+            'coerce': lambda x: x
         }
     }
 

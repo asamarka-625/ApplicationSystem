@@ -37,6 +37,9 @@ TYPE_MAPPING = {
     "аварийная": RequestType.EMERGENCY
 }
 
+STATUS_ID_MAPPING = [{"id": i, "name": name.capitalize()} for i, name in enumerate(STATUS_MAPPING.keys())]
+TYPE_ID_MAPPING = [{"id": i, "name": name.capitalize()} for i, name in enumerate(TYPE_MAPPING.keys())]
+
 
 # Модель Заявки
 class Request(Base):
@@ -125,7 +128,7 @@ class Request(Base):
         "RequestDocument",
         back_populates="request",
     )
-    history: so.Mapped[Optional["RequestHistory"]] = so.relationship(
+    history: so.Mapped[List["RequestHistory"]] = so.relationship(
         "RequestHistory",
         back_populates="request",
     )
@@ -190,13 +193,13 @@ class RequestHistory(Base):
     __tablename__ = "request_history"
 
     id: so.Mapped[int] = so.mapped_column(sa.Integer, primary_key=True)
-    action: so.Mapped[str] = so.mapped_column(
-        sa.String(32),
+    action: so.Mapped[RequestStatus] = so.mapped_column(
+        sa.Enum(RequestStatus),
         nullable=False
     )
-    description: so.Mapped[str] = so.mapped_column(
+    description: so.Mapped[Optional[str]] = so.mapped_column(
         sa.Text,
-        nullable=False
+        nullable=True
     )
     created_at: so.Mapped[datetime] = so.mapped_column(
         sa.DateTime(timezone=True),
@@ -213,7 +216,8 @@ class RequestHistory(Base):
     user_id: so.Mapped[int] = so.mapped_column(
         sa.Integer,
         sa.ForeignKey("users.id"),
-        nullable=False
+        nullable=False,
+        index=True
     )
 
     # Связи

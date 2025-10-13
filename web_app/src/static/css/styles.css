@@ -657,3 +657,117 @@ body {
 .form-group {
     position: relative; /* Для позиционирования подсказок */
 }
+
+/* Добавить стили */
+.items-container {
+    margin-bottom: 10px;
+}
+
+.item-input-wrapper {
+    position: relative;
+    margin-bottom: 8px;
+}
+
+.btn-add-item {
+    background: #f8f9fa;
+    border: 1px dashed #6c757d;
+    color: #6c757d;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-add-item:hover {
+    background: #e9ecef;
+}
+
+.btn-remove-item {
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
+    margin-left: 8px;
+    cursor: pointer;
+}
+
+/* Добавить стили для кнопки */
+.btn-view-details {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+}
+
+.btn-view-details:hover {
+    background: #0056b3;
+}
+
+.btn-approve {
+    background: #27ae60;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+}
+
+.btn-approve:hover {
+    background: #219653;
+}
+
+.btn-reject {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+}
+
+.btn-reject:hover {
+    background: #c0392b;
+}
+
+.btn-redirect {
+    background: #f39c12;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+}
+
+.btn-redirect:hover {
+    background: #f39c12;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.status-registered { background: #fff3cd; color: #856404; }
+.status-in_progress { background: #cce7ff; color: #004085; }
+.status-completed { background: #d4edda; color: #155724; }
+.status-cancelled { background: #f8d7da; color: #721c24; }
+
+.emergency-badge {
+    background: #dc3545;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}

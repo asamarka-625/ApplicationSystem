@@ -84,7 +84,7 @@ class UserAdmin(ModelView, model=User):
                 ('сотрудник фбу', 'Сотрудник ФБУ'),
                 ('исполнитель', 'Исполнитель')
             ],
-            'coerce': lambda x: ROLE_MAPPING.get(x.lower())
+            'coerce': lambda x: x
         },
         'position': {
             'label': 'Должность',
@@ -105,6 +105,10 @@ class UserAdmin(ModelView, model=User):
 
     # При создании пользователя
     async def on_model_change(self, data, model, is_created, request):
+        if 'role' in data:
+            convert_role = data['role']
+            data['role'] = ROLE_MAPPING[convert_role]
+
         if 'full_name' in data:
             data['full_name'] = data['full_name'].lower()
             full_name_list = data['full_name'].split(' ')

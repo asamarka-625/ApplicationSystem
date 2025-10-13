@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Система управления заявками мировых судей</title>
+    <title>{{ title }}</title>
     <link rel="stylesheet" href="{{ url_for('static', path='css/styles.css')}}">
+    {% if page == "request_detail" %}
+    <link rel="stylesheet" href="{{ url_for('static', path='css/request_detail.css')}}">
+    {% endif %}
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -16,8 +19,8 @@
                 <span>Система мировых судей</span>
             </div>
             <div class="user-info">
-                <span id="userName">Иванов И.И.</span>
-                <div class="user-role" id="userRole">Мировой судья</div>
+                <span id="userName">{{ full_name }}</span>
+                <div class="user-role" id="userRole">{{ role }}</div>
             </div>
         </div>
     </header>
@@ -27,38 +30,52 @@
         <aside class="sidebar">
             <nav class="sidebar-nav">
                 <ul>
+                    {% if role == 'Сотрудник ФБУ' %}
                     <li class="nav-item active">
-                        <a href="#dashboard" class="nav-link">
+                        <a href="/dashboard" class="nav-link">
                             <i class="fas fa-tachometer-alt"></i>
                             <span>Дашборд</span>
                         </a>
                     </li>
+                    {% endif %}
+                    {% if role == 'Сотрудник управления' %}
                     <li class="nav-item">
-                        <a href="#requests" class="nav-link">
+                        <a href="/requests/all" class="nav-link">
+                            <i class="fas fa-list-alt"></i>
+                            <span>Все Заявки</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a href="/requests" class="nav-link">
                             <i class="fas fa-list-alt"></i>
                             <span>Мои заявки</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="#create-request" class="nav-link">
+                        <a href="/create" class="nav-link">
                             <i class="fas fa-plus-circle"></i>
                             <span>Создать заявку</span>
                         </a>
                     </li>
+                    {% if role == 'Сотрудник ФБУ' %}
                     <li class="nav-item">
-                        <a href="#statistics" class="nav-link">
+                        <a href="/statistics" class="nav-link">
                             <i class="fas fa-chart-bar"></i>
                             <span>Статистика</span>
                         </a>
                     </li>
+                    {% endif %}
+                    {% if role == 'Сотрудник управления' %}
                     <li class="nav-item">
-                        <a href="#calendar" class="nav-link">
+                        <a href="/calendar" class="nav-link">
                             <i class="fas fa-calendar-alt"></i>
                             <span>Календарь</span>
                         </a>
                     </li>
+                    {% endif %}
                     <li class="nav-item">
-                        <a href="#references" class="nav-link">
+                        <a href="/references" class="nav-link">
                             <i class="fas fa-book"></i>
                             <span>Справочники</span>
                         </a>
@@ -72,7 +89,23 @@
 			{% block content %}{% endblock %}
 		</main>
 	</div>
+
+    <!-- Уведомления -->
+    <div id="notification" class="notification hidden">
+        <div class="notification-content">
+            <span id="notificationMessage"></span>
+        </div>
+    </div>
+
 	<script src="{{ url_for('static', path='js/app.js') }}"></script>
+    {% if page == "create" %}
 	<script src="{{ url_for('static', path='js/create.js') }}"></script>
+    {% elif page == "requests" %}
+    <script src="{{ url_for('static', path='js/requests.js') }}"></script>
+    {% elif page == "request_detail" %}
+    <script src="{{ url_for('static', path='js/request_detail.js') }}"></script>
+    {% elif page == "requests_all" %}
+    <script src="{{ url_for('static', path='js/requests_all.js') }}"></script>
+    {% endif %}
 </body>
 </html>

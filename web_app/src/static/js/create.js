@@ -4,28 +4,28 @@ async function loadCreateInfo() {
     try {
         const response = await fetch(`${API_BASE_URL}/info`);
         const data = await response.json();
-        const info = data.departament;
-        const request_type = data.request_type;
+        const departament_data = data.departament;
+        const request_type_data = data.request_type;
 
-        const select1 = document.getElementById('');
-        info.forEach(site => {
+        const select_departament = document.getElementById('departamentSite');
+        departament_data.forEach(departament => {
             const option = document.createElement('option');
-            option.value = site.code;
-            option.textContent = site.name;
-            select1.appendChild(option);
+            option.value = departament.code;
+            option.textContent = departament.name;
+            select_departament.appendChild(option);
         });
 
-        const select2 = document.getElementById('requestType');
-        request_type.forEach(site => {
+        const select_request_type = document.getElementById('requestType');
+        request_type_data.forEach(request_type => {
             const option = document.createElement('option');
-            option.value = site;
-            option.textContent = site;
-            select2.appendChild(option);
+            option.value = request_type.id;
+            option.textContent = request_type.name;
+            select_request_type.appendChild(option);
         });
 
     } catch (error) {
-        console.error('Ошибка загрузки судебных участков:', error);
-        showNotification('Ошибка загрузки справочников', 'error');
+        console.error('Ошибка загрузки информации:', error);
+        showNotification('Ошибка загрузки информации', 'error');
     }
 }
 
@@ -55,18 +55,23 @@ async function handleRequestSubmit(e) {
         console.error('Form with id "requestForm" not found');
         return;
     }
-    
+
+    const itemInputs = document.querySelectorAll('.request-item-input');
+    const items = Array.from(itemInputs)
+        .filter(input => input.value.trim() !== '')
+        .map(input => (
+            input.dataset.id ? Number(input.dataset.id) : null
+        ));
+
     const formData = new FormData(form);
-    
-    // Остальной код без изменений
+
     const requestData = {
-        itemId: formData.get('itemId'),
-        description: formData.get('description'),
-        request_type_id: formData.get('requestTypeId'),
-        departament_Id: formData.get('departamentId'),
-        is_emergency: formData.get('requestType') === 'Аварийная'
+        items: items,
+        description: formData.get('description') || '',
+        request_type: Number(formData.get('requestTypeId')),
+        departament: Number(formData.get('departamentId'))
     };
-    
+
     try {
         const response = await fetch(`${API_BASE_URL}/`, {
             method: 'POST',
@@ -92,93 +97,146 @@ document.addEventListener('DOMContentLoaded', function() {
 	loadCreateInfo();
 	
 	// Получаем элементы
-	const searchInput = document.getElementById('requestTitle');
-	const suggestionsContainer = document.getElementById('suggestions');
+    const itemsContainer = document.getElementById('itemsContainer');
+    const addItemBtn = document.getElementById('addItemBtn');
 
-	// Накладываем событие на ввод с debounce
-	let searchTimeout;
-	searchInput.addEventListener('input', function(event) {
-		const searchTerm = event.target.value.trim();
+    // Функция для создания нового поля ввода
+    function createItemField(value = '', itemId = '') {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'item-input-wrapper';
+        wrapper.innerHTML = `
+            <div style="display: flex; align-items: center;">
+                <input type="text" class="request-item-input" name="itemId"
+                       placeholder="Выберите предметы" autocomplete="off"
+                       value="${value}">
+                <button type="button" class="btn-remove-item">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="suggestions-container"></div>
+        `;
 
-		// Очищаем предыдущий таймер
-		clearTimeout(searchTimeout);
+        const input = wrapper.querySelector('.request-item-input');
+        const suggestions = wrapper.querySelector('.suggestions-container');
+        const removeBtn = wrapper.querySelector('.btn-remove-item');
 
-		// Если строка не пустая, отправляем запрос через 300ms
-		if (searchTerm.length > 2) {
-			searchTimeout = setTimeout(() => {
-				searchItems(searchTerm);
-			}, 300);
-		} else {
-			hideSuggestions();
-		}
-	});
-	
-	// Функция для скрытия подсказок
-	function hideSuggestions() {
-		suggestionsContainer.style.display = 'none';
-	}
+        if (itemId) {
+            input.dataset.id = itemId;
+        }
 
-	// Функция для отображения подсказок
-	function displaySuggestions(items) {
-		if (!items || items.length === 0) {
-			hideSuggestions();
-			return;
-		}
+        // Обработчики для нового поля
+        setupItemField(input, suggestions, removeBtn, wrapper);
 
-		const suggestionsHTML = items.map(name => `
-			<div class="suggestion-item" data-value="${name}">
-				${name}
-			</div>
-		`).join('');
+        return wrapper;
+    }
 
-		suggestionsContainer.innerHTML = suggestionsHTML;
-		suggestionsContainer.style.display = 'block';
-	}
+    // Функция настройки обработчиков для поля
+    function setupItemField(input, suggestions, removeBtn, wrapper) {
+        let searchTimeout;
 
-	// Обработчик клика по подсказке
-	suggestionsContainer.addEventListener('click', function(event) {
-		if (event.target.classList.contains('suggestion-item')) {
-			const value = event.target.getAttribute('data-value');
-			searchInput.value = value;
-			hideSuggestions();
-		}
-	});
+        input.addEventListener('input', function(event) {
+            const searchTerm = event.target.value.trim();
+            clearTimeout(searchTimeout);
 
-	// Скрываем подсказки при клике вне input
-	document.addEventListener('click', function(event) {
-		if (!searchInput.contains(event.target) && !suggestionsContainer.contains(event.target)) {
-			hideSuggestions();
-		}
-	});
+            if (searchTerm.length > 2) {
+                searchTimeout = setTimeout(() => {
+                    searchItems(searchTerm, suggestions, input);
+                }, 300);
+            } else {
+                hideSuggestions(suggestions);
+            }
+        });
 
-	// Дополнительные обработчики для клавиатуры
-	searchInput.addEventListener('keydown', function(event) {
-		if (event.key === 'Escape') {
-			hideSuggestions();
-		}
-	});
-	
-	// Функция для отправки запроса
-	async function searchItems(query) {
-		try {
-			showLoading(true);
-			const response = await fetch(`${API_BASE_URL}/item/?search=${encodeURIComponent(query)}`);
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function() {
+                // Не удаляем первое поле
+                if (itemsContainer.children.length > 1) {
+                    wrapper.remove();
+                }
+            });
+        }
 
-			if (!response.ok) {
-				throw new Error('Ошибка сети');
-			}
+        // Обработчик клика по подсказке
+        suggestions.addEventListener('click', function(event) {
+            if (event.target.classList.contains('suggestion-item')) {
+                const value = event.target.getAttribute('data-value');
+                const name = event.target.textContent.trim();
+                input.value = name;
+                input.dataset.id = value;
+                hideSuggestions(suggestions);
+            }
+        });
 
-			const results = await response.json();
-			displaySuggestions(results);
+        // Скрытие подсказок
+        input.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                hideSuggestions(suggestions);
+            }
+        });
+    }
 
-		} catch (error) {
-			console.error('Ошибка поиска:', error);
-			hideSuggestions();
-			
-		} finally {
-			showLoading(false);
-		}
-	}
-	
+    // Обработчик добавления нового поля
+    addItemBtn.addEventListener('click', function() {
+        const newField = createItemField();
+        itemsContainer.appendChild(newField);
+    });
+
+    // Обновленная функция поиска
+    async function searchItems(query, suggestionsContainer, input) {
+        try {
+            showLoading(true);
+            const response = await fetch(`${API_BASE_URL}/item/?search=${encodeURIComponent(query)}`);
+
+            if (!response.ok) {
+                throw new Error('Ошибка сети');
+            }
+
+            const results = await response.json();
+            displaySuggestions(results, suggestionsContainer, input);
+
+        } catch (error) {
+            console.error('Ошибка поиска:', error);
+            hideSuggestions(suggestionsContainer);
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    // Обновленная функция отображения подсказок
+    function displaySuggestions(items, suggestionsContainer, input) {
+        if (!items || items.length === 0) {
+            hideSuggestions(suggestionsContainer);
+            return;
+        }
+
+        const suggestionsHTML = items.map(item => `
+            <div class="suggestion-item" data-value="${item.id}">
+                ${item.name} ${item.description}
+            </div>
+        `).join('');
+
+        suggestionsContainer.innerHTML = suggestionsHTML;
+        suggestionsContainer.style.display = 'block';
+    }
+
+    // Обновленная функция скрытия подсказок
+    function hideSuggestions(suggestionsContainer) {
+        suggestionsContainer.style.display = 'none';
+    }
+
+    // Обновленный обработчик клика вне поля
+    document.addEventListener('click', function(event) {
+        if (!event.target.closest('.request-item-input') && !event.target.closest('.suggestion-item')) {
+            document.querySelectorAll('.suggestions-container').forEach(hideSuggestions);
+        }
+    });
+
+    // Инициализация первого поля
+    const firstInput = document.querySelector('.request-item-input');
+    const firstSuggestions = document.querySelector('.suggestions-container');
+    const firstWrapper = document.querySelector('.item-input-wrapper');
+
+    setupItemField(firstInput, firstSuggestions, null, firstWrapper);
+
 	document.getElementById('sumbit_create').addEventListener('click', handleRequestSubmit);
 });

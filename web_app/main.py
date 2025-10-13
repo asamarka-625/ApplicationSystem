@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqladmin import Admin
 # Внутренние модули
-from web_app.src.core import config, engine # , setup_database
+from web_app.src.core import config, engine, setup_database
 from web_app.src.routers import router
 from web_app.src.admin import (UserAdmin, ItemAdmin, CategoryAdmin,
                                DepartmentAdmin, RequestAdmin)
@@ -13,7 +13,7 @@ from web_app.src.admin import (UserAdmin, ItemAdmin, CategoryAdmin,
 
 async def startup():
     config.logger.info("Инициализируем базу данных...")
-    # await setup_database()
+    await setup_database()
 
 
 async def shutdown():

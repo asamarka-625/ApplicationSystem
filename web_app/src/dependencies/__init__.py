@@ -1,0 +1,1 @@
+from web_app.src.dependencies.depends import get_current_user

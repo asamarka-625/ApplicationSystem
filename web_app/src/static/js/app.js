@@ -10,3 +10,11 @@ function showNotification(message, type = 'success') {
         notification.classList.add('hidden');
     }, 5000);
 }
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ru-RU') + ' ' + date.toLocaleTimeString('ru-RU', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}

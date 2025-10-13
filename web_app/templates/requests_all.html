@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section id="requests" class="content-section">
+    <div class="section-header">
+        <h1>Все заявки</h1>
+        <div class="filters">
+            <select id="departamentFilter">
+                <option value="">Все отделения</option>
+            </select>
+            <select id="statusFilter">
+                <option value="">Все статусы</option>
+            </select>
+            <select id="typeFilter">
+                <option value="">Все типы</option>
+            </select>
+            <button class="btn btn-secondary" onclick="exportToExcel()">
+                <i class="fas fa-file-excel"></i> Экспорт в Excel
+            </button>
+        </div>
+    </div>
+
+    <div class="requests-table-container">
+        <table class="requests-table">
+            <thead>
+                <tr>
+                    <th>№ заявки</th>
+                    <th>Тип</th>
+                    <th>Статус</th>
+                    <th>Срочность</th>
+                    <th>Дата создания</th>
+                    <th>Срок выполнения</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody id="requestsTableBody">
+                <!-- Данные будут загружены через JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

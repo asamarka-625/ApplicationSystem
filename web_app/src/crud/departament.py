@@ -10,7 +10,7 @@ from web_app.src.models import Department
 from web_app.src.core import connection
 
 
-# Проверяем, существует ли товар с таким номером
+# Выводим все отделы
 @connection
 async def sql_get_all_departament(session: AsyncSession) -> List[Dict[str, Any]]:
     try:
@@ -20,7 +20,7 @@ async def sql_get_all_departament(session: AsyncSession) -> List[Dict[str, Any]]
         departments = departments_result.scalars()
 
         return [
-            {"code": d.code, "name": f"{d.name} ({d.address})"}
+            {"code": d.id, "name": f"[{d.code}] {d.name} ({d.address})"}
             for d in departments
         ]
 

@@ -133,42 +133,6 @@
                 </div>
             </section>
 
-            <!-- Список заявок -->
-            <section id="requests" class="content-section">
-                <div class="section-header">
-                    <h1>Мои заявки</h1>
-                    <div class="filters">
-                        <select id="statusFilter">
-                            <option value="">Все статусы</option>
-                        </select>
-                        <select id="typeFilter">
-                            <option value="">Все типы</option>
-                        </select>
-                        <button class="btn btn-secondary" onclick="exportToExcel()">
-                            <i class="fas fa-file-excel"></i> Экспорт в Excel
-                        </button>
-                    </div>
-                </div>
-
-                <div class="requests-table-container">
-                    <table class="requests-table">
-                        <thead>
-                            <tr>
-                                <th>№ заявки</th>
-                                <th>Тип</th>
-                                <th>Предметы</th>
-                                <th>Статус</th>
-                                <th>Дата создания</th>
-                                <th>Срок</th>
-                            </tr>
-                        </thead>
-                        <tbody id="requestsTableBody">
-                            <!-- Данные будут загружены через JavaScript -->
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
             <!-- Статистика -->
             <section id="statistics" class="content-section">
                 <div class="section-header">
@@ -226,13 +190,6 @@
             <div class="modal-body" id="requestModalBody">
                 <!-- Содержимое будет загружено через JavaScript -->
             </div>
-        </div>
-    </div>
-
-    <!-- Уведомления -->
-    <div id="notification" class="notification hidden">
-        <div class="notification-content">
-            <span id="notificationMessage"></span>
         </div>
     </div>
 

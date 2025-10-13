@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div id="requestDetails" style="display: none;">
+    <h2>Детали заявки №<span id="registrationNumber"></span></h2>
+
+    <table class="details-table">
+        <tr>
+            <th>Регистрационный номер</th>
+            <td id="regNumber"></td>
+        </tr>
+        <tr>
+            <th>Тип заявки</th>
+            <td id="requestType"></td>
+        </tr>
+        <tr>
+            <th>Статус</th>
+            <td><span id="statusBadge" class="status-badge"></span></td>
+        </tr>
+        <tr>
+            <th>Описание</th>
+            <td id="description"></td>
+        </tr>
+        <tr>
+            <th>Срочность</th>
+            <td id="emergency"></td>
+        </tr>
+        <tr>
+            <th>Судебный участок</th>
+            <td id="department"></td>
+        </tr>
+        <tr>
+            <th>Создатель</th>
+            <td id="creator"></td>
+        </tr>
+        <tr>
+            <th>Исполнитель</th>
+            <td id="assignee"></td>
+        </tr>
+        <tr>
+            <th>Дата создания</th>
+            <td id="createdAt"></td>
+        </tr>
+        <tr>
+            <th>Срок выполнения</th>
+            <td id="deadline"></td>
+        </tr>
+        <tr>
+            <th>Дата выполнения</th>
+            <td id="completedAt"></td>
+        </tr>
+        <tr>
+            <th>Дата обновления</th>
+            <td id="updatedAt"></td>
+        </tr>
+    </table>
+
+    <div class="history-section">
+        <h3>История изменений</h3>
+        <table class="history-table" id="historyTable">
+            <thead>
+                <tr>
+                    <th>Дата</th>
+                    <th>Действие</th>
+                    <th>Описание</th>
+                    <th>Пользователь</th>
+                </tr>
+            </thead>
+            <tbody id="historyBody">
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
