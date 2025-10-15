@@ -4,16 +4,7 @@ async function loadCreateInfo() {
     try {
         const response = await fetch(`${API_BASE_URL}/info`);
         const data = await response.json();
-        const departament_data = data.departament;
         const request_type_data = data.request_type;
-
-        const select_departament = document.getElementById('departamentSite');
-        departament_data.forEach(departament => {
-            const option = document.createElement('option');
-            option.value = departament.code;
-            option.textContent = departament.name;
-            select_departament.appendChild(option);
-        });
 
         const select_request_type = document.getElementById('requestType');
         request_type_data.forEach(request_type => {
@@ -68,8 +59,7 @@ async function handleRequestSubmit(e) {
     const requestData = {
         items: items,
         description: formData.get('description') || '',
-        request_type: Number(formData.get('requestTypeId')),
-        departament: Number(formData.get('departamentId'))
+        request_type: Number(formData.get('requestTypeId'))
     };
 
     try {

@@ -18,12 +18,24 @@ class DepartmentAdmin(ModelView, model=Department):
         Department.code: 'Номер судебного участка',
         Department.name: 'Название',
         Department.address: 'Адрес',
-        Department.phone_numbers: 'Телефонные номера'
+        Department.phone_numbers: 'Телефонные номера',
+        "judges_count": "Количество судьей",
+        "secretaries_count": "Количество секретарей",
+        "requests_count": "Количество заявок"
     }
 
     column_searchable_list = [Department.code, Department.address] # список столбцов, которые можно искать
     column_sortable_list = [Department.id]  # список столбцов, которые можно сортировать
     column_default_sort = [(Department.id, True)]
+
+    column_formatters_detail = {
+        "judges_count": lambda m, a: len(m.judges) if hasattr(m, 'judges')
+                                                                and m.judges else 0,
+        "secretaries_count": lambda m, a: len(m.secretaries) if hasattr(m, 'secretaries')
+                                                                and m.secretaries else 0,
+        "requests_count": lambda m, a: len(m.requests) if hasattr(m, 'requests')
+                                                                and m.requests else 0
+    }
 
     form_create_rules = [
         'code',
@@ -37,7 +49,10 @@ class DepartmentAdmin(ModelView, model=Department):
         Department.code,
         Department.name,
         Department.address,
-        Department.phone_numbers
+        Department.phone_numbers,
+        "judges_count",
+        "secretaries_count",
+        "requests_count"
     ]
 
     form_edit_rules = [

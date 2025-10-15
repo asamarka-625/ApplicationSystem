@@ -30,22 +30,7 @@
         <aside class="sidebar">
             <nav class="sidebar-nav">
                 <ul>
-                    {% if role == 'Сотрудник ФБУ' %}
-                    <li class="nav-item active">
-                        <a href="/dashboard" class="nav-link">
-                            <i class="fas fa-tachometer-alt"></i>
-                            <span>Дашборд</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                    {% if role == 'Сотрудник управления' %}
-                    <li class="nav-item">
-                        <a href="/requests/all" class="nav-link">
-                            <i class="fas fa-list-alt"></i>
-                            <span>Все Заявки</span>
-                        </a>
-                    </li>
-                    {% endif %}
+                    {% if role == 'SECRETARY' %}
                     <li class="nav-item">
                         <a href="/requests" class="nav-link">
                             <i class="fas fa-list-alt"></i>
@@ -58,19 +43,40 @@
                             <span>Создать заявку</span>
                         </a>
                     </li>
-                    {% if role == 'Сотрудник ФБУ' %}
+                    {% endif %}
+                    {% if role == 'JUDGE' %}
+                    <li class="nav-item">
+                        <a href="/requests" class="nav-link">
+                            <i class="fas fa-list-alt"></i>
+                            <span>Заявки секретаря</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if role == 'EXECUTOR' %}
+                    <li class="nav-item">
+                        <a href="/requests" class="nav-link">
+                            <i class="fas fa-list-alt"></i>
+                            <span>Заявки на исполнения</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if role == 'MANAGEMENT' %}
+                    <li class="nav-item active">
+                        <a href="/dashboard" class="nav-link">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Дашборд</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/requests" class="nav-link">
+                            <i class="fas fa-list-alt"></i>
+                            <span>Все Заявки</span>
+                        </a>
+                    </li>
                     <li class="nav-item">
                         <a href="/statistics" class="nav-link">
                             <i class="fas fa-chart-bar"></i>
                             <span>Статистика</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                    {% if role == 'Сотрудник управления' %}
-                    <li class="nav-item">
-                        <a href="/calendar" class="nav-link">
-                            <i class="fas fa-calendar-alt"></i>
-                            <span>Календарь</span>
                         </a>
                     </li>
                     {% endif %}

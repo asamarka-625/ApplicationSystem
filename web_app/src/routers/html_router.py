@@ -22,13 +22,13 @@ async def create_page(
         "page": "create",
         "title": "Создание заявки",
         "full_name": current_user.full_name,
-        "role": current_user.role.value.capitalize()
+        "role": current_user.role.name
     }
         
     return templates.TemplateResponse('create.html', context=context)
 
 
-# Страница просмотра списков заявок пользователя
+# Страница просмотра списков заявок
 @router.get("/requests", response_class=HTMLResponse)
 async def requests_page(
         request: Request,
@@ -37,29 +37,12 @@ async def requests_page(
     context = {
         "request": request,
         "page": "requests",
-        "title": "Мои заявки",
+        "title": "Заявки",
         "full_name": current_user.full_name,
-        "role": current_user.role.value.capitalize()
+        "role": current_user.role.name
     }
 
     return templates.TemplateResponse('requests.html', context=context)
-
-
-# Страница просмотра списков заявок пользователя
-@router.get("/requests/all", response_class=HTMLResponse)
-async def requests_page(
-        request: Request,
-        current_user: User = Depends(get_current_user)
-):
-    context = {
-        "request": request,
-        "page": "requests_all",
-        "title": "Все заявки",
-        "full_name": current_user.full_name,
-        "role": current_user.role.value.capitalize()
-    }
-
-    return templates.TemplateResponse('requests_all.html', context=context)
 
 
 # Страница детального просмотра заявки
@@ -73,7 +56,7 @@ async def requests_page(
         "page": "request_detail",
         "title": "Просмотр заявки",
         "full_name": current_user.full_name,
-        "role": current_user.role.value.capitalize()
+        "role": current_user.role.name
     }
 
     return templates.TemplateResponse('request_detail.html', context=context)

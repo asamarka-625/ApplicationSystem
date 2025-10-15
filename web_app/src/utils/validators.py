@@ -15,9 +15,20 @@ def _validate_phone(phone):
 
 def validate_phone_from_form(form, field):
     """Валидация телефонного номера из формы"""
-    # Убираем все нецифровые символы
+    if not field.data:  # Если поле пустое (Optional)
+        return
+
+    # Проверяем, что в строке есть только разрешенные символы
+    if not re.match(r'^[\d\s\(\)\-\+]+$', field.data):
+        raise ValidationError('Номер телефона может содержать только цифры, пробелы, скобки, дефисы и знак +')
+
+    # Убираем все нецифровые символы для проверки формата
     phone = re.sub(r'\D', '', field.data)
-    _validate_phone(str(phone))
+
+    if not phone:  # Если после очистки ничего не осталось
+        raise ValidationError('Номер телефона должен содержать цифры')
+
+    _validate_phone(phone)
 
 
 def validate_phone_list(phone_list):

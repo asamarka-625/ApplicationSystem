@@ -77,10 +77,30 @@ function displayRequests(data) {
                         <a class="btn-view-details" href="/request/${request.registration_number}">
                             <i class="fas fa-eye"></i> Просмотр
                         </a>` : ''}
-                    ${rights.edit ? `
-                        <a class="btn-edit" href="/request/${request.registration_number}">
-                           <i class="fa-solid fa-pen-to-square"></i> Редактировать
+                    ${rights.approve ? `
+                        <a class="btn-approve" href="/request/${request.registration_number}">
+                            <i class="fa-solid fa-thumbs-up"></i> Утвердить
                         </a>` : ''}
+                    ${rights.redirect ? `
+                        <a class="btn-redirect" href="/request/${request.registration_number}">
+                            <i class="fa-solid fa-calendar-check"></i> Перенаправить
+                        </a> ` : ''}
+                    ${rights.deadline ? `
+                        <a class="btn-deadline" href="/request/${request.registration_number}">
+                            <i class="fa-solid fa-alarm-clock"></i> Назначить сроки
+                        </a> ` : ''}
+                    ${rights.reject ? `
+                        <a class="btn-reject" href="/request/${request.registration_number}">
+                            <i class="fa-solid fa-xmark"></i> Отклонить
+                        </a> ` : ''}
+                    ${rights.ready ? `
+                        <a class="btn-ready" href="/request/${request.registration_number}">
+                            <i class="fa-solid fa-thumbs-up"></i> Готово
+                        </a> ` : ''}
+                    ${rights.planning ? `
+                        <a class="btn-planning" href="/request/${request.registration_number}">
+                            <i class="fa-solid fa-calendar-days"></i> Планирование
+                        </a> ` : ''}
                 </div>
             </td>
         `;

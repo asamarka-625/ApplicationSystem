@@ -7,8 +7,9 @@ from sqladmin import Admin
 # Внутренние модули
 from web_app.src.core import config, engine, setup_database
 from web_app.src.routers import router
-from web_app.src.admin import (UserAdmin, ItemAdmin, CategoryAdmin,
-                               DepartmentAdmin, RequestAdmin)
+from web_app.src.admin import (UserAdmin, ItemAdmin, CategoryAdmin, DepartmentAdmin,
+                               RequestAdmin, SecretaryAdmin, JudgeAdmin, ManagementAdmin,
+                               ExecutorAdmin)
 
 
 async def startup():
@@ -45,8 +46,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 admin = Admin(app, engine)
 admin.add_view(UserAdmin)
+admin.add_view(SecretaryAdmin)
+admin.add_view(JudgeAdmin)
+admin.add_view(ManagementAdmin)
+admin.add_view(ExecutorAdmin)
+
 admin.add_view(CategoryAdmin)
 admin.add_view(ItemAdmin)
 admin.add_view(DepartmentAdmin)

@@ -1,1 +1,1 @@
-from web_app.src.dependencies.depends import get_current_user
+from web_app.src.dependencies.depends import get_current_user, get_current_user_with_role

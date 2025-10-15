@@ -22,7 +22,6 @@ class CreateRequest(BaseModel):
     items: List[Annotated[int, Field(ge=1)]]
     description: Annotated[str, Field(strict=True, strip_whitespace=True)]
     request_type: Annotated[int, Field(ge=0, lt=len(TYPE_MAPPING))]
-    departament: Annotated[int, Field(ge=1)]
 
 
 # Схема информации о заявки
@@ -51,8 +50,10 @@ class RequestDetailResponse(BaseModel):
     items: List[str]
     description: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
     department_name: Annotated[str, Field(strict=True, strip_whitespace=True)]
-    creator_name: Annotated[str, Field(strict=True, strip_whitespace=True)]
-    assignee_name: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
+    secretary_name: Annotated[str, Field(strict=True, strip_whitespace=True)]
+    judge_name: Annotated[str, Field(strict=True, strip_whitespace=True)]
+    management_name: Annotated[str, Field(strict=True, strip_whitespace=True)]
+    executor_name: Annotated[str, Field(strict=True, strip_whitespace=True)]
     created_at: datetime
     deadline: Optional[datetime]
     updated_at: Optional[datetime]

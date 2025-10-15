@@ -31,6 +31,15 @@ class Department(Base):
         "Request",
         back_populates="department"
     )
+    # Связи
+    judges: so.Mapped[List["Judge"]] = so.relationship(
+        "Judge",
+        back_populates="department"
+    )
+    secretaries: so.Mapped[List["Secretary"]] = so.relationship(
+        "Secretary",
+        back_populates="department"
+    )
 
     def __repr__(self):
         return f"<Department(id={self.id}, code='{self.code}', name='{self.name}')>"

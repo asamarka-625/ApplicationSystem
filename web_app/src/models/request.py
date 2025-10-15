@@ -90,15 +90,27 @@ class Request(Base):
     )
 
     # Внешние ключи
-    creator_id: so.Mapped[int] = so.mapped_column(
+    secretary_id: so.Mapped[int] = so.mapped_column(
         sa.Integer,
-        sa.ForeignKey("users.id"),
+        sa.ForeignKey("secretaries.id"),
         nullable=False,
         index=True
     )
-    assignee_id: so.Mapped[Optional[int]] = so.mapped_column(
+    judge_id: so.Mapped[int] = so.mapped_column(
         sa.Integer,
-        sa.ForeignKey("users.id"),
+        sa.ForeignKey("judges.id"),
+        nullable=False,
+        index=True
+    )
+    management_id: so.Mapped[Optional[int]] = so.mapped_column(
+        sa.Integer,
+        sa.ForeignKey("management.id"),
+        nullable=True,
+        index=True
+    )
+    executor_id: so.Mapped[Optional[int]] = so.mapped_column(
+        sa.Integer,
+        sa.ForeignKey("executors.id"),
         nullable=True,
         index=True
     )
@@ -110,21 +122,27 @@ class Request(Base):
     )
 
     # Связи
-    creator: so.Mapped["User"] = so.relationship(
-        "User",
-        back_populates="created_requests",
-        foreign_keys=[creator_id]
+    secretary: so.Mapped["Secretary"] = so.relationship(
+    "Secretary",
+        back_populates="secretary_requests"
     )
-    assignee: so.Mapped[Optional["User"]] = so.relationship(
-        "User",
-        back_populates="assigned_requests",
-        foreign_keys=[assignee_id],
+    judge: so.Mapped["Judge"] = so.relationship(
+        "Judge",
+        back_populates="judge_requests"
     )
-    department: so.Mapped[List["Department"]] = so.relationship(
+    management: so.Mapped[Optional["Management"]] = so.relationship(
+        "Management",
+        back_populates="management_requests"
+    )
+    executor: so.Mapped[Optional["Executor"]] = so.relationship(
+        "Executor",
+        back_populates="executor_requests"
+    )
+    department: so.Mapped["Department"] = so.relationship(
     "Department",
         back_populates="requests"
     )
-    related_documents: so.Mapped[Optional["RequestDocument"]] = so.relationship(
+    related_documents: so.Mapped[List["RequestDocument"]] = so.relationship(
         "RequestDocument",
         back_populates="request",
     )

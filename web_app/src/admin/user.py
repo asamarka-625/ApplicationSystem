@@ -1,7 +1,9 @@
 # Внешние зависимости
+from typing import Type
 from sqladmin import ModelView
+from sqladmin.forms import Form
 from wtforms import PasswordField, SelectField
-from wtforms.validators import DataRequired, ValidationError, Email
+from wtforms.validators import DataRequired, ValidationError, Email, Optional
 import bcrypt  # или другой хэширующий алгоритм
 # Внутренние модули
 from web_app.src.models import User, ROLE_MAPPING
@@ -10,17 +12,23 @@ from web_app.src.utils import validate_phone_from_form
 
 
 class UserAdmin(ModelView, model=User):
-    column_list = [User.id, User.role, User.username, User.full_name, User.email]
+    column_list = [
+        User.id,
+        User.username,
+        User.full_name,
+        User.role,
+        User.is_active
+    ]
+
     column_labels = {
         User.id: "Идентификатор",
-        User.role: "Роль",
         User.username: "Имя пользователя",
         User.full_name: "ФИО",
         User.email: "Email",
-        User.position: "Должность",
         User.phone: "Номер телефона",
         User.last_login: "Последняя дата входа",
-        User.is_active: "Статус"
+        User.is_active: "Статус",
+        User.role: "Роль"
     }
 
     column_searchable_list = [User.full_name] # список столбцов, которые можно искать
@@ -28,11 +36,12 @@ class UserAdmin(ModelView, model=User):
     column_default_sort = [(User.id, True)]
 
     column_formatters = {
-        User.role: lambda m, a: m.role.value.capitalize() if m.role else ''
+        User.role: lambda m, a: m.role.value.capitalize() if m.role else "Отсутствует"
     }
 
     column_formatters_detail = {
-        User.role: lambda m, a: m.role.value.capitalize() if m.role else '',
+        User.role: lambda m, a: m.role.value.capitalize() if m.role else "Отсутствует",
+        User.phone: lambda m, a: m.phone if m.phone else "Отсутствует",
         User.is_active: lambda m, a: "Активен" if m.is_active else "Неактивен",
         User.last_login: lambda m, a: m.last_login.strftime("%d.%m.%Y %H:%M") if m.last_login else "Не заходил"
     }
@@ -42,15 +51,21 @@ class UserAdmin(ModelView, model=User):
         'full_name',
         'email',
         'password_hash',
-        'role',
-        'position',
-        'phone',
-        'is_active'
+        'phone'
     ]
+
+    form_edit_rules = [
+        "username",
+        "email",
+        "password_hash",
+        "full_name",
+        "phone",
+        "is_active"
+    ]
+
     # Добавляем виртуальное поле password
     form_overrides = {
         'password_hash': PasswordField,
-        'role': SelectField,
         'is_active': SelectField
     }
 
@@ -73,37 +88,20 @@ class UserAdmin(ModelView, model=User):
             'label': 'ФИО',
             'description': 'Напишите ваше ФИО полностью'
         },
-        'role': {
-            'label': 'Роль',
-            'description': 'Выберите роль пользователя',
-            'choices': [
-                ('сотрудник комитета', 'Сотрудник комитета'),
-                ('сотрудник управления', 'Сотрудник управления'),
-                ('мировой судья', 'Мировой судья'),
-                ('секретарь суда', 'Секретарь суда'),
-                ('сотрудник фбу', 'Сотрудник ФБУ'),
-                ('исполнитель', 'Исполнитель')
-            ],
-            'coerce': lambda x: x
-        },
-        'position': {
-            'label': 'Должность',
-            'description': 'Напишите вашу должность'
-        },
         'phone': {
             'label': 'Номер телефона',
-            'validators': [DataRequired(), validate_phone_from_form],
-            'description': 'Напишите ваш номер тедефона'
+            'validators': [Optional(), validate_phone_from_form],
+            'description': 'Напишите ваш номер телефона'
         },
         'is_active': {
             'label': 'Статус',
-            'description': 'Выберите статус пользоваеля',
-            'choices': [("Активен", "Активен"), ("Неактивен", "Неактивен")],  # ИСПРАВЛЕНО
-            'coerce': lambda x: x == "Активен"
+            'description': 'Выберите статус пользователя',
+            'choices': [(1, 'Активен'), (0, 'Неактивен')],
+            'coerce': lambda x: bool(int(x))
         }
     }
 
-    # При создании пользователя
+    # При создании/изменении пользователя
     async def on_model_change(self, data, model, is_created, request):
         if 'role' in data:
             convert_role = data['role']
@@ -112,7 +110,7 @@ class UserAdmin(ModelView, model=User):
         if 'full_name' in data:
             data['full_name'] = data['full_name'].lower()
             full_name_list = data['full_name'].split(' ')
-            if len(full_name_list) > 1:
+            if len(full_name_list) == 3:
                 data['full_name'] = ' '.join(string.capitalize() for string in full_name_list)
 
             else:
@@ -141,7 +139,7 @@ class UserAdmin(ModelView, model=User):
                     raise ValidationError(f"Email '{data['username']}' уже используется")
 
         # Хэширование пароля
-        if 'password_hash' in data:
+        if 'password_hash' in data and data['password_hash']:
             password = data['password_hash']
             password_bytes = password.encode('utf-8')
             salt = bcrypt.gensalt()
@@ -150,7 +148,25 @@ class UserAdmin(ModelView, model=User):
             # Сохраняем хэш
             data['password_hash'] = hashed_password.decode('utf-8')
 
+        elif not is_created and 'password_hash' in data and not data['password_hash']:
+            # При редактировании, если пароль не указан - оставляем старый
+            del data['password_hash']
+
         return await super().on_model_change(data, model, is_created, request)
+
+    async def scaffold_form(self, form_type: str = None) -> Type[Form]:
+        form_class = await super().scaffold_form(form_type)
+
+        # Определяем тип формы по контексту
+        if "is_active" in form_type:
+            form_class.password_hash = PasswordField(
+                'Пароль',
+                validators=[Optional()],
+                description='Оставьте пустым, если не хотите менять пароль',
+                render_kw={'class': 'form-control'}
+            )
+
+        return form_class
 
     column_details_list = [
         User.id,
@@ -158,21 +174,9 @@ class UserAdmin(ModelView, model=User):
         User.username,
         User.role,
         User.email,
-        User.position,
         User.phone,
         User.last_login,
         User.is_active
-    ]
-
-    form_edit_rules = [
-        "username",
-        "email",
-        "password_hash",
-        "full_name",
-        "role",
-        "position",
-        "phone",
-        "is_active"
     ]
 
     can_create = True # право создавать
@@ -184,7 +188,7 @@ class UserAdmin(ModelView, model=User):
     name = "Пользователь" # название
     name_plural = "Пользователи" # множественное название
     icon = "fa-solid fa-circle-user" # иконка
-    category = "Аккаунты" # категория
+    category = "Пользователи" # категория
     category_icon = "fa-solid fa-list" # иконка категории
 
     page_size = 10

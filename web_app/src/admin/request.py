@@ -26,8 +26,6 @@ class RequestAdmin(ModelView, model=Request):
         Request.update_at: "Дата обновления",
         Request.deadline: "Срок выполнения",
         Request.completed_at: "Выполнено",
-        Request.creator: "Заявитель",
-        Request.assignee: "Уполномоченный",
         Request.department: "Отделение",
         'items_formatted': "Запрошено"
     }
@@ -49,7 +47,6 @@ class RequestAdmin(ModelView, model=Request):
         Request.deadline: lambda m, a: m.deadline.strftime("%d.%m.%Y %H:%M") if m.deadline else "Не установлен",
         Request.completed_at: lambda m, a: m.completed_at.strftime("%d.%m.%Y %H:%M") \
             if m.completed_at else "Не выполнено",
-        Request.assignee: lambda m, a: m.assignee if m.assignee else 'Нет',
         'items_formatted': lambda m, a: RequestAdmin._format_items_detail(m.items)
     }
 
@@ -112,8 +109,6 @@ class RequestAdmin(ModelView, model=Request):
         Request.update_at,
         Request.deadline,
         Request.completed_at,
-        Request.creator,
-        Request.assignee,
         Request.department,
         'items_formatted'
     ]

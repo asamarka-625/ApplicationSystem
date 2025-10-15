@@ -752,6 +752,51 @@ body {
     background: #f39c12;
 }
 
+.btn-edit {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+}
+
+.btn-edit:hover {
+    background: #0056b3;
+}
+
+.btn-ready {
+    background: #27ae60;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+}
+
+.btn-ready:hover {
+    background: #219653;
+}
+
+.btn-planning {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+}
+
+.btn-planning:hover {
+    background: #0056b3;
+}
+
 .status-badge {
     padding: 4px 8px;
     border-radius: 4px;
