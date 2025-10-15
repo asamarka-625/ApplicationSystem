@@ -14,7 +14,7 @@ from web_app.src.models import (Request, TYPE_ID_MAPPING, request_item, RequestH
 from web_app.src.core import connection
 from web_app.src.schemas import (CreateRequest, RequestResponse, RequestDetailResponse,
                                  RequestHistoryResponse, RequestDataResponse, RightsRequest,
-                                 RedirectRequest)
+                                 RedirectRequest, UserRequest)
 
 
 # Создаем новую заявку
@@ -187,10 +187,22 @@ async def sql_get_request_details(
             items=[f"{item.name} {item.description}" for item in request.items],
             description=request.description,
             department_name=f"[{request.department.code}] {request.department.name} ({request.department.address})",
-            secretary_name=request.secretary.user.full_name,
-            judge_name=request.judge.user.full_name,
-            management_name=request.management.user.full_name if request.management else 'Не задан',
-            executor_name=request.executor.user.full_name if request.executor else 'Не задан',
+            secretary=UserRequest(
+                id=request.secretary.user.id,
+                name=request.secretary.user.full_name
+            ),
+            judge=UserRequest(
+                id=request.secretary.user.id,
+                name=request.secretary.user.full_name
+            ),
+            management=UserRequest(
+                id=request.management.user.id if request.management else None,
+                name=request.management.user.full_name if request.management else None
+            ),
+            executor=UserRequest(
+                id=request.executor.user.id if request.executor else None,
+                name=request.executor.user.full_name if request.executor else None
+            ),
             created_at=request.created_at,
             deadline=request.deadline,
             updated_at=request.update_at,
@@ -204,7 +216,10 @@ async def sql_get_request_details(
                         "value": h.action.value
                     },
                     description=h.description,
-                    user=h.user.full_name
+                    user=UserRequest(
+                        id=h.user.id,
+                        name=h.user.full_name if h.user else None
+                    )
                 )
                 for h in request.history
             ]

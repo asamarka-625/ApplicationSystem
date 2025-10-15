@@ -18,6 +18,85 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         showNotification('Номер заявки не указан', 'error');
     }
+
+    // Элементы модального окна
+    const userModal = document.getElementById('userModal');
+    const userInfo = document.getElementById('userInfo');
+    const closeModal = document.getElementById('closeModal');
+    const closeBtn = document.querySelector('.close');
+
+    // Функция для открытия модального окна с информацией о пользователе
+    async function openUserModal(userId) {
+        try {
+            // Показываем индикатор загрузки
+            userInfo.innerHTML = '<div class="loading">Загрузка...</div>';
+            userModal.style.display = 'block';
+
+            // Делаем запрос к API
+            const response = await fetch(`/user/${userId}`);
+
+            if (!response.ok) {
+                throw new Error('Ошибка при получении данных пользователя');
+            }
+
+            const userData = await response.json();
+
+            // Отображаем данные пользователя
+            displayUserInfo(userData);
+
+        } catch (error) {
+            console.error('Ошибка:', error);
+            userInfo.innerHTML = `<div class="error">Ошибка при загрузке данных: ${error.message}</div>`;
+        }
+    }
+
+    // Функция для отображения информации о пользователе
+    function displayUserInfo(user) {
+        userInfo.innerHTML = `
+            <div class="user-info-item">
+                <span class="user-info-label">ID:</span>
+                <span class="user-info-value">${user.id || '—'}</span>
+            </div>
+            <div class="user-info-item">
+                <span class="user-info-label">Имя:</span>
+                <span class="user-info-value">${user.name || '—'}</span>
+            </div>
+            <div class="user-info-item">
+                <span class="user-info-label">Email:</span>
+                <span class="user-info-value">${user.email || '—'}</span>
+            </div>
+            <div class="user-info-item">
+                <span class="user-info-label">Статус:</span>
+                <span class="user-info-value">${user.status || '—'}</span>
+            </div>
+            <div class="user-info-item">
+                <span class="user-info-label">Дата регистрации:</span>
+                <span class="user-info-value">${user.created_at ? formatDate(user.created_at) : '—'}</span>
+            </div>
+            ${user.additional_info ? `
+            <div class="user-info-item">
+                <span class="user-info-label">Дополнительная информация:</span>
+                <span class="user-info-value">${user.additional_info}</span>
+            </div>
+            ` : ''}
+        `;
+    }
+
+    // Закрытие модального окна
+    function closeUserModal() {
+        userModal.style.display = 'none';
+    }
+
+    // Обработчики событий
+    closeBtn.addEventListener('click', closeUserModal);
+    closeModal.addEventListener('click', closeUserModal);
+
+    // Закрытие при клике вне модального окна
+    window.addEventListener('click', (event) => {
+        if (event.target === userModal) {
+            closeUserModal();
+        }
+    });
 });
 
 async function loadRequestDetails(id) {
@@ -46,10 +125,10 @@ function displayRequestDetails(request) {
     document.getElementById('items').innerHTML = request.items.join('<br>');
     document.getElementById('description').textContent = request.description;
     document.getElementById('department').textContent = request.department_name;
-    document.getElementById('secretary_name').textContent = request.secretary_name;
-    document.getElementById('judge_name').textContent = request.judge_name;
-    document.getElementById('management_name').textContent = request.management_name ? request.management_name : 'Не назанчен';
-    document.getElementById('executor_name').textContent = request.executor_name ? request.executor_name : 'Не назанчен';
+    document.getElementById('secretary_name').textContent = request.secretary.name;
+    document.getElementById('judge_name').textContent = request.judge.name;
+    document.getElementById('management_name').textContent = request.management.name ? request.management.name : 'Не назанчен';
+    document.getElementById('executor_name').textContent = request.executor.name ? request.executor.name : 'Не назанчен';
     document.getElementById('createdAt').textContent = formatDate(request.created_at);
     document.getElementById('deadline').textContent = request.deadline ? formatDate(request.deadline) : 'Не задан';
     document.getElementById('completedAt').textContent = request.completed_at ? formatDate(request.completed_at) : 'Не выполнена';
@@ -65,6 +144,8 @@ function displayRequestDetails(request) {
         '<span class="emergency-badge">Аварийная</span>' : '<span>Обычная</span>';
 
     displayRequestHistory(request.history);
+
+    document.getElementById(...)
 }
 
 function displayRequestHistory(history) {
@@ -75,7 +156,9 @@ function displayRequestHistory(history) {
         return;
     }
 
-    historyBody.innerHTML = history.map(item => `
+    historyBody.innerHTML = history
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .map(item => `
         <tr>
             <td>${formatDate(item.created_at)}</td>
             <td>
@@ -84,7 +167,7 @@ function displayRequestHistory(history) {
                 </span>
             </td>
             <td>${(item.description || '—').replace(/\n/g, '<br>')}</td>
-            <td>${item.user || 'Система'}</td>
+            <td>${item.user.name || 'Система'}</td>
         </tr>
     `).join('');
 }

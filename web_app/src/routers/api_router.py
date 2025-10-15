@@ -35,7 +35,7 @@ async def authentication_user(user_id: Annotated[int, Field(ge=1)]):
     response_model=UserResponse,
     summary="Информация о пользователе"
 )
-async def authentication_user(user_id: Annotated[int, Field(ge=1)]):
+async def get_info_user_by_id(user_id: Annotated[int, Field(ge=1)]):
     user = await sql_get_info_user_by_id(user_id=user_id)
 
     return user

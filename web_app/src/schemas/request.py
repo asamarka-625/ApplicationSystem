@@ -4,6 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 # Внутренние модули
 from web_app.src.models import TYPE_MAPPING
+from web_app.src.schemas.user import UserRequest
 
 
 # Схема запроса на создание заявки
@@ -49,7 +50,7 @@ class RequestHistoryResponse(BaseModel):
     created_at: datetime
     action: Dict[str, str]
     description: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
-    user: Annotated[str, Field(strict=True, strip_whitespace=True)]
+    user: UserRequest
 
 
 # Схема подробной информации о заявки
@@ -60,10 +61,10 @@ class RequestDetailResponse(BaseModel):
     items: List[str]
     description: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
     department_name: Annotated[str, Field(strict=True, strip_whitespace=True)]
-    secretary_name: Annotated[str, Field(strict=True, strip_whitespace=True)]
-    judge_name: Annotated[str, Field(strict=True, strip_whitespace=True)]
-    management_name: Annotated[str, Field(strict=True, strip_whitespace=True)]
-    executor_name: Annotated[str, Field(strict=True, strip_whitespace=True)]
+    secretary: UserRequest
+    judge: UserRequest
+    management: UserRequest
+    executor: UserRequest
     created_at: datetime
     deadline: Optional[datetime]
     updated_at: Optional[datetime]
