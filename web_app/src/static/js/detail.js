@@ -43,10 +43,13 @@ function displayRequestDetails(request) {
     document.getElementById('registrationNumber').textContent = request.registration_number;
     document.getElementById('regNumber').textContent = request.registration_number;
     document.getElementById('requestType').textContent = request.request_type.value;
+    document.getElementById('items').innerHTML = request.items.join('<br>');
     document.getElementById('description').textContent = request.description;
     document.getElementById('department').textContent = request.department_name;
-    document.getElementById('creator').textContent = request.creator_name;
-    document.getElementById('assignee').textContent = request.assignee_name ? request.assignee_name : 'Не назанчен';
+    document.getElementById('secretary_name').textContent = request.secretary_name;
+    document.getElementById('judge_name').textContent = request.judge_name;
+    document.getElementById('management_name').textContent = request.management_name ? request.management_name : 'Не назанчен';
+    document.getElementById('executor_name').textContent = request.executor_name ? request.executor_name : 'Не назанчен';
     document.getElementById('createdAt').textContent = formatDate(request.created_at);
     document.getElementById('deadline').textContent = request.deadline ? formatDate(request.deadline) : 'Не задан';
     document.getElementById('completedAt').textContent = request.completed_at ? formatDate(request.completed_at) : 'Не выполнена';
@@ -58,8 +61,8 @@ function displayRequestDetails(request) {
     statusBadge.className = `status-badge status-${request.status.name.toLowerCase()}`;
 
     // Срочность
-    document.getElementById('emergency').textContent = request.is_emergency ?
-        '<span class="emergency-badge">Аварийная</span>' : 'Обычная';
+    document.getElementById('emergency').innerHTML = request.is_emergency ?
+        '<span class="emergency-badge">Аварийная</span>' : '<span>Обычная</span>';
 
     displayRequestHistory(request.history);
 }
@@ -80,7 +83,7 @@ function displayRequestHistory(history) {
                     ${item.action.value}
                 </span>
             </td>
-            <td>${item.description || '—'}</td>
+            <td>${(item.description || '—').replace(/\n/g, '<br>')}</td>
             <td>${item.user || 'Система'}</td>
         </tr>
     `).join('');

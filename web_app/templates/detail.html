@@ -2,7 +2,7 @@
 
 {% block content %}
 <div id="requestDetails" style="display: none;">
-    <h2>Детали заявки №<span id="registrationNumber"></span></h2>
+    <h2>Детали заявки <span id="registrationNumber"></span></h2>
 
     <table class="details-table">
         <tr>
@@ -18,6 +18,10 @@
             <td><span id="statusBadge" class="status-badge"></span></td>
         </tr>
         <tr>
+            <th>Предметы</th>
+            <td id="items"></td>
+        </tr>
+        <tr>
             <th>Описание</th>
             <td id="description"></td>
         </tr>
@@ -30,12 +34,20 @@
             <td id="department"></td>
         </tr>
         <tr>
-            <th>Создатель</th>
-            <td id="creator"></td>
+            <th>Секретарь</th>
+            <td id="secretary_name"></td>
+        </tr>
+        <tr>
+            <th>Мировой судья</th>
+            <td id="judge_name"></td>
+        </tr>
+        <tr>
+            <th>Сотрудник управления</th>
+            <td id="management_name"></td>
         </tr>
         <tr>
             <th>Исполнитель</th>
-            <td id="assignee"></td>
+            <td id="executor_name"></td>
         </tr>
         <tr>
             <th>Дата создания</th>

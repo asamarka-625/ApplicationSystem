@@ -1,27 +1,28 @@
 # Внешние зависимости
-from typing import Annotated, List, Optional, Dict
+from typing import Annotated, List, Optional, Dict, Any
 from datetime import datetime
 from pydantic import BaseModel, Field
 # Внутренние модули
 from web_app.src.models import TYPE_MAPPING
 
 
-"""
-# Схема Пользователя
-class UserResponse(BaseModel):
-    id: Annotated[int, Field(ge=1)]
-    name: Annotated[str, Field(strict=True, max_length=50)]
-    balance: Annotated[int, Field(ge=0)]
-
-    class Config:
-        from_attributes = True
-"""
-
 # Схема запроса на создание заявки
 class CreateRequest(BaseModel):
     items: List[Annotated[int, Field(ge=1)]]
     description: Annotated[str, Field(strict=True, strip_whitespace=True)]
     request_type: Annotated[int, Field(ge=0, lt=len(TYPE_MAPPING))]
+
+
+# Схема прав на действия с заявкой
+class RightsRequest(BaseModel):
+    view: bool
+    edit: bool
+    approve: bool
+    reject: bool
+    redirect: bool
+    deadline: bool
+    planning: bool
+    ready: bool
 
 
 # Схема информации о заявки
@@ -32,6 +33,15 @@ class RequestResponse(BaseModel):
     is_emergency: bool
     created_at: datetime
     deadline: Optional[datetime]
+    rights: RightsRequest
+
+
+# Схема данных заявки
+class RequestDataResponse(BaseModel):
+    registration_number: Annotated[str, Field(strict=True, strip_whitespace=True)]
+    request_type: Dict[str, Any]
+    items: List[Dict[str, Any]]
+    description: Annotated[str, Field(strict=True, strip_whitespace=True)]
 
 
 # Схема истории изменения заявки
@@ -60,3 +70,9 @@ class RequestDetailResponse(BaseModel):
     completed_at: Optional[datetime]
     is_emergency: bool
     history: List[RequestHistoryResponse]
+
+
+# Схема запроса на назначение исполнителя
+class RedirectRequest(BaseModel):
+    executor: Annotated[int, Field(ge=1)]
+    description: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]

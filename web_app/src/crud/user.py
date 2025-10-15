@@ -1,5 +1,5 @@
 # Внешние зависимости
-from typing import Optional
+from typing import Optional, Tuple
 import sqlalchemy as sa
 import sqlalchemy.orm as so
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -93,14 +93,23 @@ async def sql_chek_update_role_by_user_id(
 async def sql_get_user_by_id(
         user_id: int,
         session: AsyncSession,
-        role: Optional[UserRole] = None
+        role: Optional[Tuple[UserRole]] = None
 ) -> User:
     try:
-        query = sa.select(User)
-        query = query.where(User.id == user_id)
+        query = sa.select(User).where(User.id == user_id)
 
-        if role == role.SECRETARY:
-            query = query.options(so.joinedload(User.secretary_profile))
+        if role is not None:
+            if UserRole.SECRETARY in role:
+                query = query.options(so.joinedload(User.secretary_profile))
+
+            if UserRole.JUDGE in role:
+                query = query.options(so.joinedload(User.judge_profile))
+
+            if UserRole.MANAGEMENT in role:
+                query = query.options(so.joinedload(User.management_profile))
+
+            if UserRole.EXECUTOR in role:
+                query = query.options(so.joinedload(User.executor_profile))
 
         user_result = await session.execute(query)
         user = user_result.scalar_one()

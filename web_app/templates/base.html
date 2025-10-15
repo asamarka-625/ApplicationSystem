@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
     <link rel="stylesheet" href="{{ url_for('static', path='css/styles.css')}}">
-    {% if page == "request_detail" %}
+    {% if page == "detail" %}
     <link rel="stylesheet" href="{{ url_for('static', path='css/request_detail.css')}}">
     {% endif %}
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -20,7 +20,7 @@
             </div>
             <div class="user-info">
                 <span id="userName">{{ full_name }}</span>
-                <div class="user-role" id="userRole">{{ role }}</div>
+                <div class="user-role" id="userRole">{{ role_value }}</div>
             </div>
         </div>
     </header>
@@ -80,6 +80,14 @@
                         </a>
                     </li>
                     {% endif %}
+                    {% if role == 'MANAGEMENT' or role == 'EXECUTOR'%}
+                     <li class="nav-item">
+                        <a href="/planning" class="nav-link">
+                            <i class="fa-solid fa-box-archive"></i>
+                            <span>Планирование</span>
+                        </a>
+                    </li>
+                    {% endif %}
                     <li class="nav-item">
                         <a href="/references" class="nav-link">
                             <i class="fas fa-book"></i>
@@ -108,10 +116,12 @@
 	<script src="{{ url_for('static', path='js/create.js') }}"></script>
     {% elif page == "requests" %}
     <script src="{{ url_for('static', path='js/requests.js') }}"></script>
-    {% elif page == "request_detail" %}
-    <script src="{{ url_for('static', path='js/request_detail.js') }}"></script>
-    {% elif page == "requests_all" %}
-    <script src="{{ url_for('static', path='js/requests_all.js') }}"></script>
+    {% elif page == "detail" %}
+    <script src="{{ url_for('static', path='js/detail.js') }}"></script>
+    {% elif page == "edit" %}
+    <script src="{{ url_for('static', path='js/edit.js') }}"></script>
+    {% elif page == "redirect" %}
+    <script src="{{ url_for('static', path='js/redirect.js') }}"></script>
     {% endif %}
 </body>
 </html>

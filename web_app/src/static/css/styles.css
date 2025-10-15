@@ -752,6 +752,21 @@ body {
     background: #f39c12;
 }
 
+.btn-deadline {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+}
+
+.btn-deadline:hover {
+    background: #0056b3;
+}
+
 .btn-edit {
     background: #007bff;
     color: white;
@@ -805,6 +820,8 @@ body {
 }
 
 .status-registered { background: #fff3cd; color: #856404; }
+.status-confirmed { background: #72eca5; color: #0c7713; }
+.status-update { background: #49d8df; color: #1f51b0; }
 .status-in_progress { background: #cce7ff; color: #004085; }
 .status-completed { background: #d4edda; color: #155724; }
 .status-cancelled { background: #f8d7da; color: #721c24; }

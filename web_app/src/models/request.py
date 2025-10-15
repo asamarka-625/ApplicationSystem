@@ -12,9 +12,11 @@ from web_app.src.models.table import request_item
 # Enum для статуса заявки
 class RequestStatus(enum.Enum):
     REGISTERED = "зарегистрирована"
+    CONFIRMED = "подтверждена"
     IN_PROGRESS = "в работе"
     COMPLETED = "выполнена"
     CANCELLED = "отменена"
+    PLANNING = "запланирована"
 
 # Enum для типа заявки
 class RequestType(enum.Enum):
@@ -23,11 +25,26 @@ class RequestType(enum.Enum):
     OPERATIONAL = "эксплуатационное обслуживание"
     EMERGENCY = "аварийная"
 
+# Enum для действий, которые можно делать с заявкой
+class RequestAction(enum.Enum):
+    REGISTERED = "зарегистрирована"
+    UPDATE = "обновлена"
+    CONFIRMED = "подтверждена"
+    APPOINTED = "назначена"
+    REDIRECT = "перенаправлена"
+    DEADLINE = "поставлен срок выполнения"
+    IN_PROGRESS = "в работе"
+    COMPLETED = "выполнена"
+    CANCELLED = "отменена"
+    PLANNING = "запланирована"
+
+
 STATUS_MAPPING = {
     "зарегистрирована": RequestStatus.REGISTERED,
     "в работе": RequestStatus.IN_PROGRESS,
     "выполнена": RequestStatus.COMPLETED,
-    "отменена": RequestStatus.CANCELLED
+    "отменена": RequestStatus.CANCELLED,
+    "запланирована": RequestStatus.PLANNING
 }
 
 TYPE_MAPPING = {
@@ -53,6 +70,7 @@ class Request(Base):
         nullable=False
     )
     description: so.Mapped[Optional[str]] = so.mapped_column(sa.Text, nullable=True)
+    description_executor: so.Mapped[Optional[str]] = so.mapped_column(sa.Text, nullable=True)
     request_type: so.Mapped[RequestType] = so.mapped_column(
         sa.Enum(RequestType),
         nullable=False,
@@ -211,8 +229,8 @@ class RequestHistory(Base):
     __tablename__ = "request_history"
 
     id: so.Mapped[int] = so.mapped_column(sa.Integer, primary_key=True)
-    action: so.Mapped[RequestStatus] = so.mapped_column(
-        sa.Enum(RequestStatus),
+    action: so.Mapped[RequestAction] = so.mapped_column(
+        sa.Enum(RequestAction),
         nullable=False
     )
     description: so.Mapped[Optional[str]] = so.mapped_column(

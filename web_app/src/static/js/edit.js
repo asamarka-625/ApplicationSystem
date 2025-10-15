@@ -1,8 +1,17 @@
-const API_BASE_URL = 'http://localhost:8000/api/v1/request/create';
+const API_BASE_URL = 'http://localhost:8000/api/v1/request';
+
+function getRegistrationNumberFromUrl() {
+    const url = window.location.href;
+
+    const parts = url.split('/');
+    const registrationNumber = parts[parts.length - 2];
+
+    return registrationNumber;
+}
 
 async function loadCreateInfo() {
     try {
-        const response = await fetch(`${API_BASE_URL}/info`);
+        const response = await fetch(`${API_BASE_URL}/create/info`);
         const data = await response.json();
         const request_type_data = data.request_type;
 
@@ -25,7 +34,7 @@ function showLoading(show) {
     // Реализуйте отображение индикатора загрузки
     if (show) {
         console.log('Показываем загрузку...');
-		
+
     } else {
         console.log('Скрываем загрузку...');
     }
@@ -39,7 +48,7 @@ function resetForm() {
 // Обработка отправки формы заявки
 async function handleRequestSubmit(e) {
     e.preventDefault();
-    
+
     // Явно находим форму по ID
     const form = document.getElementById('requestForm');
     if (!form) {
@@ -62,32 +71,40 @@ async function handleRequestSubmit(e) {
         request_type: Number(formData.get('requestTypeId'))
     };
 
+    const registrationNumber = getRegistrationNumberFromUrl();
     try {
-        const response = await fetch(`${API_BASE_URL}/`, {
-            method: 'POST',
+        const response = await fetch(`${API_BASE_URL}/edit/${registrationNumber}`, {
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(requestData)
         });
-        
-        if (response.ok) {
-            showNotification('Заявка успешно создана!');
-            resetForm();
-            window.location.href = 'http://localhost:8000/requests';
 
+        if (response.ok) {
+            showNotification('Заявка успешно отредактирована!');
+            resetForm();
+            window.location.href = `http://localhost:8000/request/${registrationNumber}`;
         } else {
-            throw new Error('Ошибка создания заявки');
+            throw new Error('Ошибка редактирования заявки');
         }
     } catch (error) {
-        console.error('Ошибка создания заявки:', error);
-        showNotification('Ошибка создания заявки', 'error');
+        console.error('Ошибка редактирования заявки:', error);
+        showNotification('Ошибка редактирования заявки', 'error');
     }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    const registrationNumber = getRegistrationNumberFromUrl()
+    if (registrationNumber) {
+        loadDataRequest(registrationNumber);
+
+    } else {
+        showNotification('Номер заявки не указан', 'error');
+    }
+
 	loadCreateInfo();
-	
+
 	// Получаем элементы
     const itemsContainer = document.getElementById('itemsContainer');
     const addItemBtn = document.getElementById('addItemBtn');
@@ -177,7 +194,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function searchItems(query, suggestionsContainer, input) {
         try {
             showLoading(true);
-            const response = await fetch(`${API_BASE_URL}/item/?search=${encodeURIComponent(query)}`);
+            const response = await fetch(`${API_BASE_URL}/create/item/?search=${encodeURIComponent(query)}`);
 
             if (!response.ok) {
                 throw new Error('Ошибка сети');
@@ -223,12 +240,33 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Инициализация первого поля
-    const firstInput = document.querySelector('.request-item-input');
-    const firstSuggestions = document.querySelector('.suggestions-container');
-    const firstWrapper = document.querySelector('.item-input-wrapper');
+	async function loadDataRequest(id) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/view/data/${id}`);
+            const request = await response.json();
 
-    setupItemField(firstInput, firstSuggestions, null, firstWrapper);
+            document.getElementById('requestEdit').style.display = 'block';
 
-	document.getElementById('sumbit_create').addEventListener('click', handleRequestSubmit);
+            document.getElementById('registrationNumber').textContent = request.registration_number;
+            document.getElementById('requestType').value = request.request_type.id;
+
+            const itemsContainer = document.getElementById('itemsContainer');
+
+            request.items.forEach(item => {
+                const newField = createItemField(
+                    value = `${item.name} ${item.description}`.trim(),
+                    itemId = item.id
+                 );
+                itemsContainer.appendChild(newField);
+            });
+
+            document.getElementById('requestDescription').textContent = request.description;
+
+        } catch (error) {
+            console.error('Ошибка загрузки информации:', error);
+            showNotification('Ошибка загрузки информации', 'error');
+        }
+    }
+
+    document.getElementById('sumbit_create').addEventListener('click', handleRequestSubmit);
 });

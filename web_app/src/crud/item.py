@@ -84,9 +84,9 @@ async def sql_search_items(search: str, session: AsyncSession) -> List[Dict[str,
         ]
 
     except SQLAlchemyError as e:
-        config.logger.error(f"Database error reading all categories: {e}")
+        config.logger.error(f"Database error search items: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
     except Exception as e:
-        config.logger.error(f"Unexpected error reading all categories: {e}")
+        config.logger.error(f"Unexpected error search items: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
