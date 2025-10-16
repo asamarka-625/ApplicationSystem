@@ -9,7 +9,7 @@ from fastapi import HTTPException, status
 from web_app.src.core import config
 from web_app.src.models import User, UserRole
 from web_app.src.core import connection
-from web_app.src.schemas import UserResponse
+from web_app.src.schemas import UserInfoResponse
 
 
 # Проверяем, существует ли пользователь с таким именем
@@ -130,12 +130,36 @@ async def sql_get_user_by_id(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
 
 
-# Получаем пользователя по id
+@connection
+async def sql_get_user_by_username(
+        username: str,
+        session: AsyncSession
+) -> User:
+    try:
+        user_result = await session.execute(sa.select(User).where(User.username == username))
+        user = user_result.scalar_one()
+
+        return user
+
+    except NoResultFound:
+        config.logger.info(f"User not user found by ID: {username}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error reading user by username {username}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error reading user by username {username}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
+
+
+# Получаем данные пользователя по id
 @connection
 async def sql_get_info_user_by_id(
         user_id: int,
         session: AsyncSession
-) -> UserResponse:
+) -> UserInfoResponse:
     try:
         user_data_result = await session.execute(
             sa.select(User.full_name, User.role, User.email, User.phone)
@@ -143,9 +167,9 @@ async def sql_get_info_user_by_id(
         )
         user_data = user_data_result.fetchone()
 
-        return UserResponse(
+        return UserInfoResponse(
             full_name=user_data[0],
-            role=user_data[1].value,
+            role=user_data[1].value.capitalize(),
             email=user_data[2],
             phone=user_data[3]
         )

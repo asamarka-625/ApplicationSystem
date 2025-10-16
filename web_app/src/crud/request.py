@@ -1,5 +1,6 @@
 # Внешние зависимости
 from typing import List
+from datetime import datetime
 import uuid
 import sqlalchemy as sa
 import sqlalchemy.orm as so
@@ -13,8 +14,8 @@ from web_app.src.models import (Request, TYPE_ID_MAPPING, request_item, RequestH
                                 Secretary, Judge, Management, Executor, Item, UserRole)
 from web_app.src.core import connection
 from web_app.src.schemas import (CreateRequest, RequestResponse, RequestDetailResponse,
-                                 RequestHistoryResponse, RequestDataResponse, RightsRequest,
-                                 RedirectRequest, UserRequest)
+                                 RequestHistoryResponse, RequestDataResponse, RightsResponse,
+                                 RedirectRequest, UserResponse)
 
 
 # Создаем новую заявку
@@ -70,6 +71,9 @@ async def sql_create_request(
         config.logger.error(f"Database error while creating request: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
+    except HTTPException:
+        raise
+
     except Exception as e:
         config.logger.error(f"Unexpected error while creating request: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
@@ -96,7 +100,7 @@ async def sql_get_requests_by_user(
 
         elif user.is_management:
             query = query.where(
-                Request.status.notin_((RequestStatus.REGISTERED, RequestStatus.CANCELLED))
+                Request.status != RequestStatus.REGISTERED
             )
 
         elif user.is_executor:
@@ -128,14 +132,18 @@ async def sql_get_requests_by_user(
                 is_emergency=request.is_emergency,
                 created_at=request.created_at,
                 deadline=request.deadline,
-                rights=RightsRequest(
+                rights=RightsResponse(
                     view=True,
                     edit=request.status == RequestStatus.REGISTERED,
                     approve=request.status == RequestStatus.REGISTERED,
-                    reject=request.status == RequestStatus.REGISTERED or request.status == RequestStatus.CONFIRMED,
-                    redirect=request.status == RequestStatus.CONFIRMED,
-                    deadline=request.status == RequestStatus.CONFIRMED,
-                    planning=request.status == RequestStatus.CONFIRMED or request.status == RequestStatus.IN_PROGRESS,
+                    reject=request.status not in (RequestStatus.COMPLETED, RequestStatus.COMPLETED,
+                                                  RequestStatus.CANCELLED),
+                    redirect=request.status not in (RequestStatus.REGISTERED, RequestStatus.COMPLETED,
+                                                    RequestStatus.CANCELLED),
+                    deadline=request.status not in (RequestStatus.REGISTERED, RequestStatus.COMPLETED,
+                                                    RequestStatus.CANCELLED),
+                    planning=request.status not in (RequestStatus.REGISTERED, RequestStatus.COMPLETED,
+                                                    RequestStatus.CANCELLED),
                     ready=request.status == RequestStatus.IN_PROGRESS
                 )
             )
@@ -146,6 +154,9 @@ async def sql_get_requests_by_user(
         config.logger.error(f"Database error view requests: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
+    except HTTPException:
+        raise
+
     except Exception as e:
         config.logger.error(f"Unexpected error view requests: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
@@ -155,6 +166,7 @@ async def sql_get_requests_by_user(
 @connection
 async def sql_get_request_details(
         registration_number: str,
+        role: UserRole,
         session: AsyncSession
 ) -> RequestDetailResponse:
     try:
@@ -186,20 +198,22 @@ async def sql_get_request_details(
             },
             items=[f"{item.name} {item.description}" for item in request.items],
             description=request.description,
+            description_executor=request.description_executor if \
+                role in (UserRole.MANAGEMENT, UserRole.EXECUTOR) else None,
             department_name=f"[{request.department.code}] {request.department.name} ({request.department.address})",
-            secretary=UserRequest(
+            secretary=UserResponse(
                 id=request.secretary.user.id,
                 name=request.secretary.user.full_name
             ),
-            judge=UserRequest(
-                id=request.secretary.user.id,
-                name=request.secretary.user.full_name
+            judge=UserResponse(
+                id=request.judge.user.id,
+                name=request.judge.user.full_name
             ),
-            management=UserRequest(
+            management=UserResponse(
                 id=request.management.user.id if request.management else None,
                 name=request.management.user.full_name if request.management else None
             ),
-            executor=UserRequest(
+            executor=UserResponse(
                 id=request.executor.user.id if request.executor else None,
                 name=request.executor.user.full_name if request.executor else None
             ),
@@ -216,7 +230,7 @@ async def sql_get_request_details(
                         "value": h.action.value
                     },
                     description=h.description,
-                    user=UserRequest(
+                    user=UserResponse(
                         id=h.user.id,
                         name=h.user.full_name if h.user else None
                     )
@@ -238,6 +252,7 @@ async def sql_get_request_details(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
 
 
+# Данные заявки
 @connection
 async def sql_get_request_data(
         registration_number: str,
@@ -279,6 +294,7 @@ async def sql_get_request_data(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
 
 
+# Редактирование заявки
 @connection
 async def sql_edit_request(
         registration_number: str,
@@ -412,11 +428,15 @@ async def sql_edit_request(
         config.logger.error(f"Database error edit data request: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
+    except HTTPException:
+        raise
+
     except Exception as e:
         config.logger.error(f"Unexpected error edit data request: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
 
 
+# Подтвреждение заявки
 @connection
 async def sql_approve_request(
         registration_number: str,
@@ -461,34 +481,43 @@ async def sql_approve_request(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
 
 
+# Отклонение заявки
 @connection
 async def sql_reject_request(
         registration_number: str,
         user_id: int,
-        judge_id: int,
-        session: AsyncSession
+        role: UserRole,
+        role_id: int,
+        session: AsyncSession,
+        comment: str = ''
 ) -> None:
     try:
-        request_result = await session.execute(
-            sa.select(Request)
-            .where(
-                Request.registration_number == registration_number,
-                Request.judge_id == judge_id
-            )
-        )
+        query = sa.select(Request).where(Request.registration_number == registration_number)
+
+        if role == UserRole.JUDGE:
+            query = query.where(Request.judge_id == role_id)
+
+        elif role == UserRole.MANAGEMENT:
+            query = query.where(Request.management_id == role_id)
+
+        else:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not enough rights")
+
+        request_result = await session.execute(query)
 
         request = request_result.scalar_one()
 
-        if request.status != RequestStatus.REGISTERED:
+        if request.status in (RequestStatus.COMPLETED, RequestStatus.CANCELLED):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not enough rights")
 
         request.status = RequestStatus.CANCELLED
 
+        comment = f"Причина: {comment}" if comment else ''
         new_history = RequestHistory(
             action=RequestAction.CANCELLED,
             request_id=request.id,
             user_id=user_id,
-            description="Заявка отклонена"
+            description=f"Заявка отклонена\n{comment}"
         )
         session.add(new_history)
 
@@ -502,11 +531,15 @@ async def sql_reject_request(
         config.logger.error(f"Database error reject request: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
+    except HTTPException:
+        raise
+
     except Exception as e:
         config.logger.error(f"Unexpected error reject request: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
 
 
+# Назначение исполнителя заявки
 @connection
 async def sql_redirect_request(
         registration_number: str,
@@ -519,11 +552,21 @@ async def sql_redirect_request(
         request_result = await session.execute(
             sa.select(Request)
             .where(
-                Request.registration_number == registration_number,
+                Request.registration_number == registration_number
             )
         )
 
         request = request_result.scalar_one()
+
+        executor_user_result = await session.execute(
+            sa.select(User)
+            .join(Executor, Executor.user_id == User.id)
+            .where(Executor.id == data.executor)
+        )
+        executor_user = executor_user_result.scalar_one_or_none()
+
+        if executor_user is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Executor not found")
 
         if request.status in (RequestStatus.REGISTERED, RequestStatus.CANCELLED):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not enough rights")
@@ -537,7 +580,7 @@ async def sql_redirect_request(
             action=RequestAction.IN_PROGRESS,
             request_id=request.id,
             user_id=user_id,
-            description="Заявка отправлена на выполнение"
+            description=f"Заявка отправлена на выполнение\nИсполнитель: {executor_user.full_name}"
         )
         session.add(new_history)
 
@@ -551,6 +594,106 @@ async def sql_redirect_request(
         config.logger.error(f"Database error redirect request: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
+    except HTTPException:
+        raise
+
     except Exception as e:
         config.logger.error(f"Unexpected error redirect request: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
+
+
+# Назначение сроков заявки
+@connection
+async def sql_deadline_request(
+        registration_number: str,
+        user_id: int,
+        deadline: datetime,
+        session: AsyncSession
+) -> None:
+    try:
+        request_result = await session.execute(
+            sa.select(Request)
+            .where(
+                Request.registration_number == registration_number
+            )
+        )
+
+        request = request_result.scalar_one()
+
+        if request.status in (RequestStatus.REGISTERED, RequestStatus.CANCELLED):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not enough rights")
+
+        request.deadline = deadline
+
+        new_history = RequestHistory(
+            action=RequestAction.IN_PROGRESS,
+            request_id=request.id,
+            user_id=user_id,
+            description=f"Назначен срок выполнения: {deadline.strftime("%d. %m. %Y %H:%M")}"
+        )
+        session.add(new_history)
+
+        await session.commit()
+
+    except NoResultFound:
+        config.logger.info(f"Request not found by registration_number: {registration_number}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found")
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error deadline request: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error deadline request: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
+
+
+# Выполнение заявки
+@connection
+async def sql_execute_request(
+        registration_number: str,
+        user_id: int,
+        session: AsyncSession
+) -> None:
+    try:
+        request_result = await session.execute(
+            sa.select(Request)
+            .where(
+                Request.registration_number == registration_number
+            )
+        )
+
+        request = request_result.scalar_one()
+
+        if request.status != RequestStatus.IN_PROGRESS:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not enough rights")
+
+        request.status = RequestStatus.COMPLETED
+
+        new_history = RequestHistory(
+            action=RequestAction.IN_PROGRESS,
+            request_id=request.id,
+            user_id=user_id,
+            description=f"Заявка выполнена"
+        )
+        session.add(new_history)
+
+        await session.commit()
+
+    except NoResultFound:
+        config.logger.info(f"Request not found by registration_number: {registration_number}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found")
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error execute request: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error execute request: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")

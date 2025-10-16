@@ -21,6 +21,12 @@
             <div class="user-info">
                 <span id="userName">{{ full_name }}</span>
                 <div class="user-role" id="userRole">{{ role_value }}</div>
+                {% if role != '' %}
+                <button onclick="logout()" class="logout-btn">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    Выйти
+                </button>
+                {% endif %}
             </div>
         </div>
     </header>
@@ -88,12 +94,21 @@
                         </a>
                     </li>
                     {% endif %}
+                    {% if role == '' %}
+                    <li class="nav-item">
+                        <a href="/login" class="nav-link">
+                            <i class="fas fa-book"></i>
+                            <span>Вход</span>
+                        </a>
+                    </li>
+                    {% else %}
                     <li class="nav-item">
                         <a href="/references" class="nav-link">
                             <i class="fas fa-book"></i>
                             <span>Справочники</span>
                         </a>
                     </li>
+                    {% endif %}
                 </ul>
             </nav>
         </aside>

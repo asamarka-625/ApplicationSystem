@@ -4,11 +4,11 @@ from pydantic import Field
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 # Внутренние модули
-from web_app.src.models import TYPE_ID_MAPPING, STATUS_ID_MAPPING, User
+from web_app.src.models import TYPE_ID_MAPPING, STATUS_ID_MAPPING, User, UserRole
 from web_app.src.schemas import RequestDetailResponse, RequestDataResponse
 from web_app.src.crud import (sql_get_requests_by_user, sql_get_request_details,
                               sql_get_all_departament, sql_get_request_data)
-from web_app.src.dependencies import get_current_user_with_role
+from web_app.src.dependencies import get_current_user, get_current_user_with_role
 
 
 router = APIRouter(
@@ -42,7 +42,7 @@ async def get_filter_info(departament: bool = False):
 async def get_requests_by_user(
     status: str = "all",
     request_type: str = "all",
-    current_user: User = Depends(get_current_user_with_role())
+    current_user: User = Depends(get_current_user_with_role(tuple(UserRole))),
 ):
     requests = await sql_get_requests_by_user(
         user=current_user,
@@ -86,10 +86,12 @@ async def get_request_data(
     summary="Детали заявки"
 )
 async def get_request_details(
-    registration_number: Annotated[str, Field(strict=True)]
+    registration_number: Annotated[str, Field(strict=True)],
+    current_user: User = Depends(get_current_user)
 ):
     details = await sql_get_request_details(
-        registration_number=registration_number
+        registration_number=registration_number,
+        role=current_user.role
     )
 
     return details

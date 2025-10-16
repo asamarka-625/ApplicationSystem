@@ -1,4 +1,5 @@
-const API_BASE_URL = 'http://localhost:8000/api/v1/request/view';
+const API_URL = 'http://localhost:8000/api/v1/request/view';
+const API_BASE_URL = 'http://localhost:8000/api/v1';
 
 function getRegistrationNumberFromUrl() {
     const url = window.location.href;
@@ -33,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
             userModal.style.display = 'block';
 
             // Делаем запрос к API
-            const response = await fetch(`/user/${userId}`);
+            const response = await fetch(`${API_BASE_URL}/user/${userId}`);
 
             if (!response.ok) {
                 throw new Error('Ошибка при получении данных пользователя');
@@ -54,31 +55,21 @@ document.addEventListener('DOMContentLoaded', function() {
     function displayUserInfo(user) {
         userInfo.innerHTML = `
             <div class="user-info-item">
-                <span class="user-info-label">ID:</span>
-                <span class="user-info-value">${user.id || '—'}</span>
+                <span class="user-info-label">Имя:</span>
+                <span class="user-info-value">${user.full_name || '—'}</span>
             </div>
             <div class="user-info-item">
-                <span class="user-info-label">Имя:</span>
-                <span class="user-info-value">${user.name || '—'}</span>
+                <span class="user-info-label">Роль:</span>
+                <span class="user-info-value">${user.role || '—'}</span>
+            </div>
+            <div class="user-info-item">
+                <span class="user-info-label">Номер телефона:</span>
+                <span class="user-info-value">${user.phone || '—'}</span>
             </div>
             <div class="user-info-item">
                 <span class="user-info-label">Email:</span>
                 <span class="user-info-value">${user.email || '—'}</span>
             </div>
-            <div class="user-info-item">
-                <span class="user-info-label">Статус:</span>
-                <span class="user-info-value">${user.status || '—'}</span>
-            </div>
-            <div class="user-info-item">
-                <span class="user-info-label">Дата регистрации:</span>
-                <span class="user-info-value">${user.created_at ? formatDate(user.created_at) : '—'}</span>
-            </div>
-            ${user.additional_info ? `
-            <div class="user-info-item">
-                <span class="user-info-label">Дополнительная информация:</span>
-                <span class="user-info-value">${user.additional_info}</span>
-            </div>
-            ` : ''}
         `;
     }
 
@@ -97,78 +88,122 @@ document.addEventListener('DOMContentLoaded', function() {
             closeUserModal();
         }
     });
-});
 
-async function loadRequestDetails(id) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/detail/${id}`);
-        if (!response.ok) {
-            showNotification('Заявка не найдена', 'error');
+    async function loadRequestDetails(id) {
+        try {
+            const response = await fetch(`${API_URL}/detail/${id}`);
+            if (!response.ok) {
+                showNotification('Заявка не найдена', 'error');
+            }
+
+            const request = await response.json();
+            displayRequestDetails(request);
+
+        } catch (error) {
+            console.error('Ошибка загрузки:', error);
+            showNotification('Ошибка загрузки', 'error');
+        }
+    }
+
+    function displayRequestDetails(request) {
+        document.getElementById('requestDetails').style.display = 'block';
+
+        // Заполняем данные
+        document.getElementById('registrationNumber').textContent = request.registration_number;
+        document.getElementById('regNumber').textContent = request.registration_number;
+        document.getElementById('requestType').textContent = request.request_type.value;
+        document.getElementById('items').innerHTML = request.items.join('<br>');
+        document.getElementById('description').textContent = request.description;
+        if (request.description_executor != null) {
+            document.getElementById('description_executor').textContent = request.description_executor;
+            document.getElementById('for_executor').style = '';
+        }
+        document.getElementById('department').textContent = request.department_name;
+        document.getElementById('secretary_name').textContent = request.secretary.name;
+        document.getElementById('judge_name').textContent = request.judge.name;
+        document.getElementById('management_name').textContent = request.management.name ? request.management.name : 'Не назанчен';
+        document.getElementById('executor_name').textContent = request.executor.name ? request.executor.name : 'Не назанчен';
+        document.getElementById('createdAt').textContent = formatDate(request.created_at);
+        document.getElementById('deadline').textContent = request.deadline ? formatDate(request.deadline) : 'Не задан';
+        document.getElementById('completedAt').textContent = request.completed_at ? formatDate(request.completed_at) : 'Не выполнена';
+        document.getElementById('updatedAt').textContent = request.updated_at ? formatDate(request.updated_at) : 'Не обновлялась';
+
+        // Статус
+        const statusBadge = document.getElementById('statusBadge');
+        statusBadge.textContent = request.status.value;
+        statusBadge.className = `status-badge status-${request.status.name.toLowerCase()}`;
+
+        // Срочность
+        document.getElementById('emergency').innerHTML = request.is_emergency ?
+            '<span class="emergency-badge">Аварийная</span>' : '<span>Обычная</span>';
+
+        const secretary_button = document.getElementById('secretary_name');
+        secretary_button.classList.add('btn-info');
+        secretary_button.addEventListener('click', () => {
+            openUserModal(request.secretary.id);
+        });
+
+        const judge_button = document.getElementById('judge_name');
+        judge_button.classList.add('btn-info');
+        judge_button.addEventListener('click', () => {
+            openUserModal(request.judge.id);
+        });
+
+        const management_button = document.getElementById('management_name');
+        if (request.management.id) {
+            management_button.classList.add('btn-info');
+            management_button.addEventListener('click', () => {
+                openUserModal(request.management.id);
+            });
+        } else {
+            management_button.classList.add('btn-not-info');
         }
 
-        const request = await response.json();
-        displayRequestDetails(request);
+        const executor_button = document.getElementById('executor_name');
+        if (request.executor.id) {
+            executor_button.classList.add('btn-info');
+            executor_button.addEventListener('click', () => {
+                openUserModal(request.executor.id);
+            });
+        } else {
+            executor_button.classList.add('btn-not-info');
+        }
 
-    } catch (error) {
-        console.error('Ошибка загрузки:', error);
-        showNotification('Ошибка загрузки', 'error');
-    }
-}
-
-function displayRequestDetails(request) {
-    document.getElementById('requestDetails').style.display = 'block';
-
-    // Заполняем данные
-    document.getElementById('registrationNumber').textContent = request.registration_number;
-    document.getElementById('regNumber').textContent = request.registration_number;
-    document.getElementById('requestType').textContent = request.request_type.value;
-    document.getElementById('items').innerHTML = request.items.join('<br>');
-    document.getElementById('description').textContent = request.description;
-    document.getElementById('department').textContent = request.department_name;
-    document.getElementById('secretary_name').textContent = request.secretary.name;
-    document.getElementById('judge_name').textContent = request.judge.name;
-    document.getElementById('management_name').textContent = request.management.name ? request.management.name : 'Не назанчен';
-    document.getElementById('executor_name').textContent = request.executor.name ? request.executor.name : 'Не назанчен';
-    document.getElementById('createdAt').textContent = formatDate(request.created_at);
-    document.getElementById('deadline').textContent = request.deadline ? formatDate(request.deadline) : 'Не задан';
-    document.getElementById('completedAt').textContent = request.completed_at ? formatDate(request.completed_at) : 'Не выполнена';
-    document.getElementById('updatedAt').textContent = request.updated_at ? formatDate(request.updated_at) : 'Не обновлялась';
-
-    // Статус
-    const statusBadge = document.getElementById('statusBadge');
-    statusBadge.textContent = request.status.value;
-    statusBadge.className = `status-badge status-${request.status.name.toLowerCase()}`;
-
-    // Срочность
-    document.getElementById('emergency').innerHTML = request.is_emergency ?
-        '<span class="emergency-badge">Аварийная</span>' : '<span>Обычная</span>';
-
-    displayRequestHistory(request.history);
-
-    document.getElementById(...)
-}
-
-function displayRequestHistory(history) {
-    const historyBody = document.getElementById('historyBody');
-
-    if (!history || history.length === 0) {
-        historyBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">История изменений отсутствует</td></tr>';
-        return;
+        displayRequestHistory(request.history);
     }
 
-    historyBody.innerHTML = history
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-    .map(item => `
-        <tr>
-            <td>${formatDate(item.created_at)}</td>
-            <td>
-                <span class="status-badge status-${item.action.name.toLowerCase()}">
-                    ${item.action.value}
-                </span>
-            </td>
-            <td>${(item.description || '—').replace(/\n/g, '<br>')}</td>
-            <td>${item.user.name || 'Система'}</td>
-        </tr>
-    `).join('');
-}
+    function displayRequestHistory(history) {
+        const historyBody = document.getElementById('historyBody');
+
+        if (!history || history.length === 0) {
+            historyBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">История изменений отсутствует</td></tr>';
+            return;
+        }
+
+        historyBody.innerHTML = history
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .map(item => `
+            <tr>
+                <td>${formatDate(item.created_at)}</td>
+                <td>
+                    <span class="status-badge status-${item.action.name.toLowerCase()}">
+                        ${item.action.value}
+                    </span>
+                </td>
+                <td>${(item.description || '—').replace(/\n/g, '<br>')}</td>
+                <td>
+                    ${item.user.name ?
+                    `<button class="history btn-info" data-user-id=${item.user.id}>${item.user.name}</button>`
+                    : 'Система'}
+                </td>
+            </tr>
+        `).join('');
+
+        historyBody.addEventListener('click', (event) => {
+            if (event.target.classList.contains('history')) {
+                openUserModal(event.target.dataset.userId);
+            }
+        });
+    }
+});
 

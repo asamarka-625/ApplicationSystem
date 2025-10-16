@@ -4,7 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 # Внутренние модули
 from web_app.src.models import TYPE_MAPPING
-from web_app.src.schemas.user import UserRequest
+from web_app.src.schemas.user import UserResponse
 
 
 # Схема запроса на создание заявки
@@ -14,8 +14,8 @@ class CreateRequest(BaseModel):
     request_type: Annotated[int, Field(ge=0, lt=len(TYPE_MAPPING))]
 
 
-# Схема прав на действия с заявкой
-class RightsRequest(BaseModel):
+# Схема ответа прав на действия с заявкой
+class RightsResponse(BaseModel):
     view: bool
     edit: bool
     approve: bool
@@ -26,7 +26,7 @@ class RightsRequest(BaseModel):
     ready: bool
 
 
-# Схема информации о заявки
+# Схема ответа информации о заявки
 class RequestResponse(BaseModel):
     registration_number: Annotated[str, Field(strict=True, strip_whitespace=True)]
     request_type: Dict[str, str]
@@ -34,10 +34,10 @@ class RequestResponse(BaseModel):
     is_emergency: bool
     created_at: datetime
     deadline: Optional[datetime]
-    rights: RightsRequest
+    rights: RightsResponse
 
 
-# Схема данных заявки
+# Схема ответа данных о заявки
 class RequestDataResponse(BaseModel):
     registration_number: Annotated[str, Field(strict=True, strip_whitespace=True)]
     request_type: Dict[str, Any]
@@ -45,26 +45,27 @@ class RequestDataResponse(BaseModel):
     description: Annotated[str, Field(strict=True, strip_whitespace=True)]
 
 
-# Схема истории изменения заявки
+# Схема ответа истории изменения заявки
 class RequestHistoryResponse(BaseModel):
     created_at: datetime
     action: Dict[str, str]
     description: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
-    user: UserRequest
+    user: UserResponse
 
 
-# Схема подробной информации о заявки
+# Схема ответа подробной информации о заявки
 class RequestDetailResponse(BaseModel):
     registration_number: Annotated[str, Field(strict=True, strip_whitespace=True)]
     request_type: Dict[str, str]
     status: Dict[str, str]
     items: List[str]
     description: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
+    description_executor: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
     department_name: Annotated[str, Field(strict=True, strip_whitespace=True)]
-    secretary: UserRequest
-    judge: UserRequest
-    management: UserRequest
-    executor: UserRequest
+    secretary: UserResponse
+    judge: UserResponse
+    management: UserResponse
+    executor: UserResponse
     created_at: datetime
     deadline: Optional[datetime]
     updated_at: Optional[datetime]
@@ -77,3 +78,13 @@ class RequestDetailResponse(BaseModel):
 class RedirectRequest(BaseModel):
     executor: Annotated[int, Field(ge=1)]
     description: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
+
+
+# Схема запроса комментария
+class CommentRequest(BaseModel):
+    comment: Annotated[str, Field(strict=True, strip_whitespace=True)]
+
+
+# Схема запроса даты и времени
+class ScheduleRequest(BaseModel):
+    scheduled_datetime: datetime

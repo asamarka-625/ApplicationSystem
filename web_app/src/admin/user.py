@@ -4,11 +4,11 @@ from sqladmin import ModelView
 from sqladmin.forms import Form
 from wtforms import PasswordField, SelectField
 from wtforms.validators import DataRequired, ValidationError, Email, Optional
-import bcrypt  # или другой хэширующий алгоритм
 # Внутренние модули
 from web_app.src.models import User, ROLE_MAPPING
 from web_app.src.crud import sql_chek_existing_user_by_name, sql_chek_existing_user_by_email
 from web_app.src.utils import validate_phone_from_form
+from web_app.src.utils import get_password_hash
 
 
 class UserAdmin(ModelView, model=User):
@@ -141,12 +141,8 @@ class UserAdmin(ModelView, model=User):
         # Хэширование пароля
         if 'password_hash' in data and data['password_hash']:
             password = data['password_hash']
-            password_bytes = password.encode('utf-8')
-            salt = bcrypt.gensalt()
-            hashed_password = bcrypt.hashpw(password_bytes, salt)
-
             # Сохраняем хэш
-            data['password_hash'] = hashed_password.decode('utf-8')
+            data['password_hash'] = get_password_hash(password)
 
         elif not is_created and 'password_hash' in data and not data['password_hash']:
             # При редактировании, если пароль не указан - оставляем старый

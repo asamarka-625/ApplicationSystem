@@ -105,3 +105,18 @@ async def redirect_page(
     }
 
     return templates.TemplateResponse('redirect.html', context=context)
+
+
+# Страница аутентификации
+@router.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    context = {
+        "request": request,
+        "page": "login",
+        "title": "Аутентификации",
+        "full_name": '',
+        "role": '',
+        "role_value": ''
+    }
+
+    return templates.TemplateResponse('login.html', context=context)

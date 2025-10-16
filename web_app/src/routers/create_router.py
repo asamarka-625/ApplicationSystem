@@ -76,9 +76,9 @@ async def search_executors(
 )
 async def create_request(
         data: CreateRequest,
-        current_user: User = Depends(get_current_user_with_role(
-            (UserRole.SECRETARY,)
-        )),
+        current_user: User = Depends(
+            get_current_user_with_role((UserRole.SECRETARY,))
+        )
 ):
     print(data)
     if not current_user.is_secretary:

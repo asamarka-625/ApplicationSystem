@@ -339,6 +339,7 @@ body {
     max-width: 800px;
     max-height: 80vh;
     overflow-y: auto;
+    padding: 25px;
 }
 
 .modal-header {
@@ -832,4 +833,72 @@ body {
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 12px;
+}
+
+/* Стили для datetime picker */
+.datetime-picker {
+    margin: 20px 0;
+}
+
+.date-section, .time-section {
+    margin-bottom: 20px;
+}
+
+.date-input, .time-select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.date-input:focus, .time-select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+.selected-info {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 4px;
+    margin: 15px 0;
+    text-align: center;
+}
+
+.selected-info p {
+    margin: 0;
+    font-weight: 500;
+}
+
+#selectedDisplay {
+    color: #667eea;
+    font-weight: bold;
+}
+
+.time-option {
+    padding: 8px 12px;
+}
+
+.logout-btn {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.logout-btn:hover {
+    background-color: #c82333;
+}
+
+.logout-link {
+    color: #dc3545;
+    text-decoration: none;
+    margin-left: 15px;
+}
+
+.logout-link:hover {
+    text-decoration: underline;
 }

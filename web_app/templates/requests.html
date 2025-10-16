@@ -36,4 +36,60 @@
         </table>
     </div>
 </section>
+<!-- Модальное окно для отклонения заявки -->
+<div id="rejectModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Отклонение заявки</h2>
+        <form id="rejectForm">
+            <div class="form-group">
+                <label for="rejectReason">Причина отклонения:</label>
+                <textarea
+                    id="rejectReason"
+                    name="reason"
+                    rows="4"
+                    placeholder="Укажите причину отклонения заявки..."
+                    required
+                ></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="cancelReject">Отмена</button>
+                <button type="submit" class="btn btn-danger" id="confirmReject">Отклонить заявку</button>
+            </div>
+        </form>
+    </div>
+</div>
+<input type="hidden" id="selectedDate" name="selected_date">
+<input type="hidden" id="selectedTime" name="selected_time">
+<!-- Модальное окно для выбора даты и времени -->
+<div id="dateTimeModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Выберите дату и время</h2>
+
+        <div class="datetime-picker">
+            <div class="date-section">
+                <h3>Дата:</h3>
+                <input type="date" id="dateInput" class="date-input" min="">
+            </div>
+
+            <div class="time-section">
+                <h3>Время:</h3>
+                <select id="timeSelect" class="time-select">
+                    <option value="">Выберите время</option>
+                    <!-- Опции будут заполнены JavaScript -->
+                </select>
+            </div>
+
+            <div class="selected-info">
+                <p>Выбрано: <span id="selectedDisplay">—</span></p>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="cancelDateTime">Отмена</button>
+                <button type="button" class="btn btn-primary" id="confirmDateTime" disabled>Подтвердить</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

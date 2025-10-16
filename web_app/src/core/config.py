@@ -14,7 +14,10 @@ load_dotenv()
 class Config:
     _database_url: str = field(default_factory=lambda: os.getenv("DATABASE_URL"))
     logger: logging.Logger = field(init=False)
-    test_user_id: int = 2
+    SECRET_KEY: str = field(default_factory=lambda: os.getenv("SECRET_KEY"))
+    ALGORITHM: str = field(default_factory=lambda: os.getenv("ALGORITHM"))
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = field(default_factory=lambda: int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")))
+    blacklisted_tokens: set = field(default_factory=set)
 
     def __post_init__(self):
         self.logger = setup_logger(

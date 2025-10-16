@@ -18,3 +18,23 @@ function formatDate(dateString) {
         minute: '2-digit'
     });
 }
+
+async function logout() {
+    try {
+        const response = await fetch('/logout', {
+            method: 'POST',
+            credentials: 'include'  // Важно для отправки кук
+        });
+
+        if (response.ok) {
+            // Очищаем localStorage на всякий случай
+            localStorage.removeItem('access_token');
+            // Перенаправляем на страницу логина
+            window.location.href = '/login';
+        } else {
+            alert('Logout failed!');
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+    }
+}

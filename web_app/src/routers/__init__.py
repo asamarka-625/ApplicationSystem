@@ -6,7 +6,7 @@ from web_app.src.routers.view_router import router as view_router
 from web_app.src.routers.html_router import router as html_router
 from web_app.src.routers.api_router import router as api_router
 from web_app.src.routers.update_router import router as update_router
-
+from web_app.src.routers.authentication_router import router as authentication_router
 
 router = APIRouter()
 router.include_router(create_router)
@@ -14,3 +14,4 @@ router.include_router(view_router)
 router.include_router(html_router)
 router.include_router(api_router)
 router.include_router(update_router)
+router.include_router(authentication_router)
