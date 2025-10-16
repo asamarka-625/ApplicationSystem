@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8000/api/v1/request/create';
+const API_BASE_URL = '/api/v1/request/create';
 
 async function loadCreateInfo() {
     try {
@@ -74,7 +74,7 @@ async function handleRequestSubmit(e) {
         if (response.ok) {
             showNotification('Заявка успешно создана!');
             resetForm();
-            window.location.href = 'http://localhost:8000/requests';
+            window.location.href = '/requests';
 
         } else {
             throw new Error('Ошибка создания заявки');

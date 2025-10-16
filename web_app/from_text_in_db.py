@@ -1,5 +1,3 @@
-from turtledemo.sorting_animate import start_ssort
-
 data = {
     "КАНЦЕЛЯРСКИЕ ТОВАРЫ": [
         {

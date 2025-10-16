@@ -64,7 +64,22 @@ class DepartmentAdmin(ModelView, model=Department):
 
     async def on_model_change(self, data, model, is_created, request):
         if 'phone_numbers' in data:
-            validate_phone_list(data['phone_numbers'])
+            phone_numbers = data['phone_numbers']
+
+            # Преобразуем в строку, если это число
+            if isinstance(phone_numbers, int):
+                phone_numbers = str(phone_numbers)
+
+            elif phone_numbers is None:
+                phone_numbers = ""
+
+            # Если это список, преобразуем в строку
+            elif isinstance(phone_numbers, list):
+                phone_numbers = ", ".join(str(phone) for phone in phone_numbers)
+
+            # Обновляем данные перед валидацией
+            data['phone_numbers'] = phone_numbers
+            validate_phone_list(phone_numbers)
 
     can_create = True # право создавать
     can_edit = True # право редактировать

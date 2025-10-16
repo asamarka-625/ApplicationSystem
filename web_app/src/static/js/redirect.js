@@ -1,5 +1,5 @@
-const API_URL = 'http://localhost:8000/api/v1/request/create';
-const API_BASE_URL = 'http://localhost:8000/api/v1/request';
+const API_URL = '/api/v1/request/create';
+const API_BASE_URL = '/api/v1/request';
 
 function getRegistrationNumberFromUrl() {
     const url = window.location.href;
@@ -197,7 +197,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             showNotification('Исполнитель успешно назначен', 'success');
 
-            window.location.href = `http://localhost:8000/request/${registrationNumber}`;
+            window.location.href = `/request/${registrationNumber}`;
 
         } catch (error) {
             console.error('Ошибка:', error);

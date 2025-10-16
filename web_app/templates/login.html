@@ -25,7 +25,7 @@
             if (response.ok) {
                 const data = await response.json();
                 localStorage.setItem('access_token', data.access_token);
-                window.location.href = 'http://localhost:8000/requests';
+                window.location.href = '/requests';
 
             } else {
                 alert('Login failed!');

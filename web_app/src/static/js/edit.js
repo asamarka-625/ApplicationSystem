@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8000/api/v1/request';
+const API_BASE_URL = '/api/v1/request';
 
 function getRegistrationNumberFromUrl() {
     const url = window.location.href;
@@ -84,7 +84,7 @@ async function handleRequestSubmit(e) {
         if (response.ok) {
             showNotification('Заявка успешно отредактирована!');
             resetForm();
-            window.location.href = `http://localhost:8000/request/${registrationNumber}`;
+            window.location.href = `/request/${registrationNumber}`;
         } else {
             throw new Error('Ошибка редактирования заявки');
         }

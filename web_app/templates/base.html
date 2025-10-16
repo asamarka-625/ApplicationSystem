@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='css/styles.css')}}">
+    <link rel="stylesheet" href="/static/css/styles.css">
     {% if page == "detail" %}
-    <link rel="stylesheet" href="{{ url_for('static', path='css/detail.css')}}">
+    <link rel="stylesheet" href="/static/css/detail.css">
     {% endif %}
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
@@ -126,17 +126,17 @@
         </div>
     </div>
 
-	<script src="{{ url_for('static', path='js/app.js') }}"></script>
+	<script src="/static/js/app.js"></script>
     {% if page == "create" %}
-	<script src="{{ url_for('static', path='js/create.js') }}"></script>
+    <script src="/static/js/create.js"></script>
     {% elif page == "requests" %}
-    <script src="{{ url_for('static', path='js/requests.js') }}"></script>
+    <script src="/static/js/requests.js"></script>
     {% elif page == "detail" %}
-    <script src="{{ url_for('static', path='js/detail.js') }}"></script>
+    <script src="/static/js/detail.js"></script>
     {% elif page == "edit" %}
-    <script src="{{ url_for('static', path='js/edit.js') }}"></script>
+    <script src="/static/js/edit.js"></script>
     {% elif page == "redirect" %}
-    <script src="{{ url_for('static', path='js/redirect.js') }}"></script>
+    <script src="/static/js/redirect.js"></script>
     {% endif %}
 </body>
 </html>

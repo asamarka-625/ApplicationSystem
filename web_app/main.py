@@ -46,7 +46,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 admin = Admin(app, engine)
 admin.add_view(UserAdmin)
 admin.add_view(SecretaryAdmin)
@@ -58,7 +57,6 @@ admin.add_view(CategoryAdmin)
 admin.add_view(ItemAdmin)
 admin.add_view(DepartmentAdmin)
 admin.add_view(RequestAdmin)
-
 
 if __name__ == '__main__':
     import uvicorn

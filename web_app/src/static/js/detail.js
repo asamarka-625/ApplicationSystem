@@ -1,5 +1,5 @@
-const API_URL = 'http://localhost:8000/api/v1/request/view';
-const API_BASE_URL = 'http://localhost:8000/api/v1';
+const API_URL = '/api/v1/request/view';
+const API_BASE_URL = '/api/v1';
 
 function getRegistrationNumberFromUrl() {
     const url = window.location.href;
