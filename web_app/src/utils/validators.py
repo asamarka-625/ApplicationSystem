@@ -38,4 +38,4 @@ def validate_phone_list(phone_list):
 
     for phone in phone_list:
         phone = re.sub(r'\D', '', phone)
-        _validate_phone(str(phone))
+        _validate_phone(phone)

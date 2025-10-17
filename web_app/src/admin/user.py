@@ -2,13 +2,15 @@
 from typing import Type
 from sqladmin import ModelView
 from sqladmin.forms import Form
-from wtforms import PasswordField, SelectField
+from wtforms import PasswordField, SelectField, BooleanField
 from wtforms.validators import DataRequired, ValidationError, Email, Optional
 # Внутренние модули
 from web_app.src.models import User, ROLE_MAPPING
-from web_app.src.crud import sql_chek_existing_user_by_name, sql_chek_existing_user_by_email
+from web_app.src.crud import (sql_chek_existing_user_by_name, sql_chek_existing_user_by_email,
+                              sql_get_user_by_username)
 from web_app.src.utils import validate_phone_from_form
 from web_app.src.utils import get_password_hash
+from web_app.src.core import config
 
 
 class UserAdmin(ModelView, model=User):
@@ -32,7 +34,7 @@ class UserAdmin(ModelView, model=User):
     }
 
     column_searchable_list = [User.full_name] # список столбцов, которые можно искать
-    column_sortable_list = [User.id]  # список столбцов, которые можно сортировать
+    column_sortable_list = [User.id, User.role]  # список столбцов, которые можно сортировать
     column_default_sort = [(User.id, True)]
 
     column_formatters = {
@@ -60,10 +62,10 @@ class UserAdmin(ModelView, model=User):
         "password_hash",
         "full_name",
         "phone",
-        "is_active"
+        "is_active",
+        "logout"
     ]
 
-    # Добавляем виртуальное поле password
     form_overrides = {
         'password_hash': PasswordField,
         'is_active': SelectField
@@ -100,6 +102,32 @@ class UserAdmin(ModelView, model=User):
             'coerce': lambda x: bool(int(x))
         }
     }
+
+    column_details_list = [
+        User.id,
+        User.full_name,
+        User.username,
+        User.role,
+        User.email,
+        User.phone,
+        User.last_login,
+        User.is_active
+    ]
+
+    can_create = True # право создавать
+    can_edit = True # право редактировать
+    can_delete = True # право удалять
+    can_view_details = True # право смотреть всю информацию
+    can_export = True # право экспортировать
+
+    name = "Пользователь" # название
+    name_plural = "Пользователи" # множественное название
+    icon = "fa-solid fa-circle-user" # иконка
+    category = "Пользователи" # категория
+    category_icon = "fa-solid fa-list" # иконка категории
+
+    page_size = 10
+    page_size_options = [10, 25, 50, 100]
 
     # При создании/изменении пользователя
     async def on_model_change(self, data, model, is_created, request):
@@ -148,6 +176,12 @@ class UserAdmin(ModelView, model=User):
             # При редактировании, если пароль не указан - оставляем старый
             del data['password_hash']
 
+        if not is_created and 'logout' in data and data['logout']:
+            user = await sql_get_user_by_username(data['username'])
+            user_active_session_tokens = config.active_session_tokens.get(user.id, set())
+            config.blacklisted_tokens.update(user_active_session_tokens)
+            config.active_session_tokens[user.id] = set()
+
         return await super().on_model_change(data, model, is_created, request)
 
     async def scaffold_form(self, form_type: str = None) -> Type[Form]:
@@ -156,36 +190,16 @@ class UserAdmin(ModelView, model=User):
         # Определяем тип формы по контексту
         if "is_active" in form_type:
             form_class.password_hash = PasswordField(
-                'Пароль',
+                label='Пароль',
                 validators=[Optional()],
                 description='Оставьте пустым, если не хотите менять пароль',
                 render_kw={'class': 'form-control'}
             )
 
+            form_class.logout = BooleanField(
+                label='Очистить сессии',
+                description='Выберите чтобы очистить все сессии пользователя',
+                default=False
+            )
+
         return form_class
-
-    column_details_list = [
-        User.id,
-        User.full_name,
-        User.username,
-        User.role,
-        User.email,
-        User.phone,
-        User.last_login,
-        User.is_active
-    ]
-
-    can_create = True # право создавать
-    can_edit = True # право редактировать
-    can_delete = True # право удалять
-    can_view_details = True # право смотреть всю информацию
-    can_export = True # право экспортировать
-
-    name = "Пользователь" # название
-    name_plural = "Пользователи" # множественное название
-    icon = "fa-solid fa-circle-user" # иконка
-    category = "Пользователи" # категория
-    category_icon = "fa-solid fa-list" # иконка категории
-
-    page_size = 10
-    page_size_options = [10, 25, 50, 100]

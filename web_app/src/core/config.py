@@ -17,6 +17,7 @@ class Config:
     SECRET_KEY: str = field(default_factory=lambda: os.getenv("SECRET_KEY"))
     ALGORITHM: str = field(default_factory=lambda: os.getenv("ALGORITHM"))
     ACCESS_TOKEN_EXPIRE_MINUTES: int = field(default_factory=lambda: int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")))
+    active_session_tokens: dict = field(default=dict)
     blacklisted_tokens: set = field(default_factory=set)
 
     def __post_init__(self):
@@ -26,6 +27,9 @@ class Config:
 
         self.validate()
         self.logger.info("Configuration initialized")
+
+        self.active_session_tokens = dict()
+        self.blacklisted_tokens = set()
 
     # Валидация конфигурации
     def validate(self):

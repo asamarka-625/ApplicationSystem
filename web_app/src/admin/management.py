@@ -1,9 +1,12 @@
 # Внешние зависимости
+from typing import Type
 from sqladmin import ModelView
+from sqladmin.forms import Form
+from wtforms import SelectField
 from wtforms.validators import ValidationError
 # Внутренние модули
 from web_app.src.models import Management, UserRole
-from web_app.src.crud import sql_chek_update_role_by_user_id
+from web_app.src.crud import sql_chek_update_role_by_user_id, sql_get_users_without_role
 
 
 class ManagementAdmin(ModelView, model=Management):
@@ -42,21 +45,6 @@ class ManagementAdmin(ModelView, model=Management):
         "requests_count"
     ]
 
-    form_args = {
-        'user': {
-            'label': 'Пользователь',
-            'description': 'Выберите пользователя'
-        }
-    }
-
-    form_ajax_refs = {
-        'user': {
-            'fields': ('full_name',),
-            'order_by': 'full_name',
-            'placeholder': 'Выберите пользователя...'
-        }
-    }
-
     can_create = True # право создавать
     can_edit = False # право редактировать
     can_delete = True # право удалять
@@ -80,3 +68,19 @@ class ManagementAdmin(ModelView, model=Management):
             )
             if existing:
                 raise ValidationError(f"Пользователь уже имеет роль!")
+
+    async def scaffold_form(self, form_type: str = None) -> Type[Form]:
+        form_class = await super().scaffold_form(form_type)
+        users = await sql_get_users_without_role()
+
+        form_class.user = SelectField(
+            label='Пользователь',
+            description='Выберите пользователя',
+            choices=[(user.id, str(user)) for user in users],
+            coerce=int,
+            filters=[],
+            default=None,
+            render_kw={'class ': 'form-control'}
+        )
+
+        return form_class

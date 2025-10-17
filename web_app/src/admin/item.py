@@ -43,28 +43,6 @@ class ItemAdmin(ModelView, model=Item):
         }
     }
 
-    # Переопределяем метод для загрузки формы
-    async def scaffold_form(self, form_type=None):
-        form = await super().scaffold_form(form_type)
-
-        # Динамически загружаем категории
-        if hasattr(form, 'category'):
-            form.category.choices = await sql_get_categories_choices()
-
-        return form
-
-    # При создании пользователя
-    async def on_model_change(self, data, model, is_created, request):
-        # Проверка уникальности username
-        if 'serial_number' in data:
-            if is_created:
-                # При создании - проверяем что serial_number не существует
-                existing = await sql_chek_existing_item_by_serial(data['serial_number'])
-                if existing:
-                    raise ValidationError(f"Серийный номер '{data['serial_number']}' уже существует")
-
-        return await super().on_model_change(data, model, is_created, request)
-
     column_details_list = [
         Item.id,
         Item.serial_number,
@@ -94,3 +72,24 @@ class ItemAdmin(ModelView, model=Item):
 
     page_size = 10
     page_size_options = [10, 25, 50, 100]
+
+    async def scaffold_form(self, form_type=None):
+        form = await super().scaffold_form(form_type)
+
+        # Динамически загружаем категории
+        if hasattr(form, 'category'):
+            form.category.choices = await sql_get_categories_choices()
+
+        return form
+
+    # При создании пользователя
+    async def on_model_change(self, data, model, is_created, request):
+        # Проверка уникальности username
+        if 'serial_number' in data:
+            if is_created:
+                # При создании - проверяем что serial_number не существует
+                existing = await sql_chek_existing_item_by_serial(data['serial_number'])
+                if existing:
+                    raise ValidationError(f"Серийный номер '{data['serial_number']}' уже существует")
+
+        return await super().on_model_change(data, model, is_created, request)

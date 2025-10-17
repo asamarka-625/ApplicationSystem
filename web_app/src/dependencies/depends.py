@@ -5,7 +5,7 @@ from jose import JWTError, jwt
 from fastapi import HTTPException, status, Cookie
 # Внутренние модули
 from web_app.src.core import config
-from web_app.src.models import UserRole
+from web_app.src.models import UserRole, User
 from web_app.src.crud import sql_get_user_by_id, sql_get_user_by_username
 from web_app.src.utils import verify_password
 
@@ -32,7 +32,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 async def get_current_user(
         access_token: Optional[str] = Cookie(None, alias="access_token")
-):
+) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",

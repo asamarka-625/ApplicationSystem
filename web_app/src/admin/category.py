@@ -27,18 +27,6 @@ class CategoryAdmin(ModelView, model=Category):
         }
     }
 
-    # При создании пользователя
-    async def on_model_change(self, data, model, is_created, request):
-        # Проверка уникальности username
-        if 'name' in data:
-            if is_created:
-                # При создании - проверяем что name не существует
-                existing = await sql_chek_existing_category_by_name(data['name'])
-                if existing:
-                    raise ValidationError(f"Название '{data['name']}' уже существует")
-
-        return await super().on_model_change(data, model, is_created, request)
-
     column_details_list = [Category.id, Category.name]
 
     form_edit_rules = [
@@ -59,3 +47,14 @@ class CategoryAdmin(ModelView, model=Category):
 
     page_size = 10
     page_size_options = [10, 25, 50, 100]
+
+    async def on_model_change(self, data, model, is_created, request):
+        # Проверка уникальности username
+        if 'name' in data:
+            if is_created:
+                # При создании - проверяем что name не существует
+                existing = await sql_chek_existing_category_by_name(data['name'])
+                if existing:
+                    raise ValidationError(f"Название '{data['name']}' уже существует")
+
+        return await super().on_model_change(data, model, is_created, request)

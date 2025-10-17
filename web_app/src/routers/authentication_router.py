@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import JSONResponse, RedirectResponse
 # Внутренние модули
 from web_app.src.core import config
-from web_app.src.dependencies import authenticate_user, create_access_token
+from web_app.src.dependencies import authenticate_user, create_access_token, get_current_user
 
 
 router = APIRouter()
@@ -37,6 +37,13 @@ async def login_for_access_token(
         max_age=30 * 60  # 30 минут
     )
 
+    if config.active_session_tokens.get(user.id, False):
+        config.active_session_tokens[user.id].add(access_token)
+
+    else:
+        config.active_session_tokens[user.id] = set()
+        config.active_session_tokens[user.id].add(access_token)
+
     return {"message": "Login successful"}
 
 
@@ -46,8 +53,9 @@ async def logout(
         access_token: Optional[str] = Cookie(None, alias="access_token")
 ):
     if access_token:
-        # Добавляем токен в черный список
+        user = await get_current_user(access_token)
         config.blacklisted_tokens.add(access_token)
+        config.active_session_tokens[user.id].discard(access_token)
 
     response.delete_cookie(
         key="access_token",
@@ -61,8 +69,26 @@ async def logout_get(
         access_token: Optional[str] = Cookie(None, alias="access_token")
 ):
     if access_token:
+        user = await get_current_user(access_token)
         config.blacklisted_tokens.add(access_token)
+        config.active_session_tokens[user.id].discard(access_token)
 
     response = RedirectResponse(url="/login", status_code=303)
     response.delete_cookie(key="access_token", path="/")
     return response
+
+
+@router.get("/black_tokens", response_class=JSONResponse)
+async def get_black_tokens():
+    return {
+        "count_black_tokens": len(config.blacklisted_tokens),
+        "black_list_tokens": config.blacklisted_tokens
+    }
+
+@router.get("/active_tokens", response_class=JSONResponse)
+async def get_black_tokens():
+    return {
+        "count_active_tokens": sum(len(value) for value in config.active_session_tokens.values()),
+        "active_list_tokens": config.active_session_tokens
+    }
+

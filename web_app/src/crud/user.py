@@ -1,5 +1,5 @@
 # Внешние зависимости
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Sequence
 import sqlalchemy as sa
 import sqlalchemy.orm as so
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -77,7 +77,7 @@ async def sql_chek_update_role_by_user_id(
         return False
 
     except NoResultFound:
-        config.logger.info(f"User not user found by ID: {user_id}")
+        config.logger.info(f"User not found by ID: {user_id}")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     except SQLAlchemyError as e:
@@ -118,7 +118,7 @@ async def sql_get_user_by_id(
         return user
 
     except NoResultFound:
-        config.logger.info(f"User not user found by ID: {user_id}")
+        config.logger.info(f"User not found by ID: {user_id}")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     except SQLAlchemyError as e:
@@ -142,7 +142,7 @@ async def sql_get_user_by_username(
         return user
 
     except NoResultFound:
-        config.logger.info(f"User not user found by ID: {username}")
+        config.logger.info(f"User not found by ID: {username}")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     except SQLAlchemyError as e:
@@ -175,7 +175,7 @@ async def sql_get_info_user_by_id(
         )
 
     except NoResultFound:
-        config.logger.info(f"User not user found by ID: {user_id}")
+        config.logger.info(f"User not found by ID: {user_id}")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     except SQLAlchemyError as e:
@@ -186,4 +186,30 @@ async def sql_get_info_user_by_id(
         config.logger.error(f"Unexpected error reading user by ID {user_id}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
 
+
+# Получаем всех пользователей без роли
+@connection
+async def sql_get_users_without_role(
+        session: AsyncSession
+) -> Sequence[User]:
+    try:
+        users_result = await session.execute(
+            sa.select(User)
+            .where(User.role == None)
+        )
+        users = users_result.scalars().all()
+
+        return users
+
+    except NoResultFound:
+        config.logger.info("Users not found by without role")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error found user by without role: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error found user by without role: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
 
