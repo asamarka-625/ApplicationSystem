@@ -10,7 +10,7 @@ from web_app.src.crud import (sql_chek_existing_user_by_name, sql_chek_existing_
                               sql_get_user_by_username)
 from web_app.src.utils import validate_phone_from_form
 from web_app.src.utils import get_password_hash
-from web_app.src.core import config
+from web_app.src.utils import token_service
 
 
 class UserAdmin(ModelView, model=User):
@@ -178,9 +178,7 @@ class UserAdmin(ModelView, model=User):
 
         if not is_created and 'logout' in data and data['logout']:
             user = await sql_get_user_by_username(data['username'])
-            user_active_session_tokens = config.active_session_tokens.get(user.id, set())
-            config.blacklisted_tokens.update(user_active_session_tokens)
-            config.active_session_tokens[user.id] = set()
+            await token_service.clear_session(user_id=user.id)
 
         return await super().on_model_change(data, model, is_created, request)
 
@@ -198,7 +196,7 @@ class UserAdmin(ModelView, model=User):
 
             form_class.logout = BooleanField(
                 label='Очистить сессии',
-                description='Выберите чтобы очистить все сессии пользователя',
+                description='Выберите, чтобы очистить все сессии пользователя',
                 default=False
             )
 

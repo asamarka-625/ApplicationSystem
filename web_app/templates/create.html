@@ -1,6 +1,110 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+.item-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.item-input-col {
+    flex: 1;
+    position: relative;
+}
+
+.item-quantity-col {
+    width: 100px;
+}
+
+.item-actions-col {
+    width: 40px;
+}
+
+.item-quantity {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.item-quantity:invalid {
+    border-color: #dc3545;
+    background-color: #fff5f5;
+}
+
+.btn-remove-item {
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.btn-remove-item:hover {
+    background: #c82333;
+}
+
+.btn-add-item {
+    background: transparent;
+    border: 1px dashed #007bff;
+    color: #007bff;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.btn-add-item:hover {
+    background: #007bff;
+    color: white;
+}
+
+.hidden-section {
+    display: none !important;
+}
+
+.file-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.file-item {
+    transition: background-color 0.2s;
+    border-radius: 4px;
+}
+
+.file-item:hover {
+    background-color: #f8f9fa;
+}
+
+.btn-remove-file:hover {
+    background-color: #dc3545 !important;
+    color: white !important;
+}
+
+.file-list-items {
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 5px;
+    background: #f8f9fa;
+}
+
+.file-counter {
+    font-weight: 500;
+}
+
+.file-counter i {
+    margin-left: 5px;
+}
+</style>
 <section id="create-request">
 	<div class="section-header">
 		<h1>Создание новой заявки</h1>
@@ -17,13 +121,35 @@
 				</select>
 			</div>
 
-			<div class="form-group">
-                <label for="requestItem">Предмет</label>
+            <div class="form-group hidden-section" id="emergencyGroup">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="isEmergency" name="isEmergency" style="width: auto; margin-right: 0.5rem;">
+                    <span class="checkmark"></span>
+                    Аварийная заявка
+                </label>
+                <small class="checkbox-description">Отметьте, если требуется срочное решение аварийной ситуации</small>
+            </div>
+
+            <div class="form-group hidden-section" id="itemsGroup">
+                <label for="itemsContainer">Предметы</label>
                 <div class="items-container" id="itemsContainer">
                     <div class="item-input-wrapper">
-                        <input type="text" class="request-item-input" name="itemId" required
-                               placeholder="Выберите предметы" autocomplete="off">
-                        <div class="suggestions-container"></div>
+                        <div class="item-row">
+                            <div class="item-input-col">
+                                <input type="text" class="request-item-input" name="itemId" required
+                                       placeholder="Выберите предмет" autocomplete="off">
+                                <div class="suggestions-container"></div>
+                            </div>
+                            <div class="item-quantity-col">
+                                <input type="number" class="item-quantity" name="itemQuantity"
+                                       value="1" min="1" required placeholder="Кол-во">
+                            </div>
+                            <div class="item-actions-col">
+                                <button type="button" class="btn-remove-item" style="display: none;">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <button type="button" class="btn-add-item" id="addItemBtn">
@@ -31,33 +157,27 @@
                 </button>
             </div>
 
-			<div class="form-group">
+			<div class="form-group hidden-section" id="commentGroup">
 				<label for="requestDescription">Подробное описание *</label>
 				<textarea id="requestDescription" name="description" rows="5" required
 						  placeholder="Опишите подробно, что требуется сделать"></textarea>
 			</div>
 		</div>
 
-		<div class="form-section emergency-section" style="display: none;">
-			<h3><i class="fas fa-exclamation-triangle"></i> Аварийная ситуация</h3>
-			<div class="emergency-warning">
-				<p>Аварийные заявки оформляются только в отношении технического и эксплуатационного обслуживания зданий и помещений судебных участков.</p>
-			</div>
-		</div>
-
-		<div class="form-section">
+		<div class="form-section hidden-section" id="attachmentsSection">
 			<h3>Дополнительная информация</h3>
 			<div class="form-group">
-				<label for="attachments">Прикрепленные файлы</label>
-				<input type="file" id="attachments" name="attachments" multiple 
-					   accept=".jpg,.jpeg,.png,.pdf,.doc,.docx">
-				<small>Можно прикрепить фото, видео или документы</small>
-			</div>
+                <label for="attachments">Прикрепленные файлы</label>
+                <input type="file" id="attachments" name="attachments" multiple
+                       accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.mp4,.avi,.mov,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                       data-max-files="5">
+                <small>Можно прикрепить до 5 файлов (фото, видео или документы). Файлы добавляются при каждом выборе.</small>
+            </div>
 		</div>
 
 		<div class="form-actions">
-			<button class="btn btn-secondary" id="reset_create">Очистить</button>
-			<button class="btn btn-primary" id="sumbit_create">
+			<button type="button" class="btn btn-secondary" id="reset_create">Очистить</button>
+			<button type="submit" class="btn btn-primary" id="sumbit_create">
 				<i class="fas fa-paper-plane"></i> Отправить заявку
 			</button>
 		</div>

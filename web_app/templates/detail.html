@@ -77,6 +77,10 @@
             <th>Дата обновления</th>
             <td id="updatedAt"></td>
         </tr>
+        <tr>
+            <th>Прикрепленные файлы</th>
+            <td id="attachments"></td>
+        </tr>
     </table>
 
     <div class="history-section">
@@ -104,6 +108,30 @@
         </div>
         <div class="modal-actions">
             <button type="button" class="btn btn-secondary" id="closeModal">Закрыть</button>
+        </div>
+    </div>
+</div>
+<div id="executorModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Назначить исполнителя для предмета</h2>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Выберите исполнителя:</label>
+                <div class="executor-list-container">
+                    <div class="executor-suggestions" id="executorSuggestions" style="display: block; position: static; border: 1px solid #ddd; border-radius: 4px; max-height: 300px; overflow-y: auto;">
+                        <!-- Список исполнителей будет здесь -->
+                    </div>
+                </div>
+            </div>
+            <div id="selectedExecutor" class="selected-executor" style="display: none;">
+                <strong>Выбран:</strong> <span id="selectedExecutorName"></span>
+                <input type="hidden" id="selectedExecutorId">
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" id="cancelExecutor">Отмена</button>
+            <button type="button" class="btn btn-primary" id="assignExecutor">Назначить</button>
         </div>
     </div>
 </div>

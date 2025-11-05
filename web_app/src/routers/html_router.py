@@ -72,7 +72,7 @@ async def edit_page(
         current_user: User = Depends(get_current_user)
 ):
     if not (current_user.is_secretary or current_user.is_judge):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not enough rights")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
     context = {
         "request": request,
@@ -86,25 +86,25 @@ async def edit_page(
     return templates.TemplateResponse('edit.html', context=context)
 
 
-# Страница назначения исполнителя заявки
-@router.get("/request/{registration_number}/redirect", response_class=HTMLResponse)
-async def redirect_page(
+# Страница назначение сотрудника управления отдела для заявки
+@router.get("/request/{registration_number}/redirect/management", response_class=HTMLResponse)
+async def redirect_management_page(
         request: Request,
         current_user: User = Depends(get_current_user)
 ):
     if not current_user.is_management:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not enough rights")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
     context = {
         "request": request,
-        "page": "redirect",
-        "title": "Назначение исполнителя",
+        "page": "redirect_management",
+        "title": "Назначение сотрудника управления отдела",
         "full_name": current_user.full_name,
         "role": current_user.role.name,
         "role_value": current_user.role.value.capitalize()
     }
 
-    return templates.TemplateResponse('redirect.html', context=context)
+    return templates.TemplateResponse('redirect_management.html', context=context)
 
 
 # Страница аутентификации

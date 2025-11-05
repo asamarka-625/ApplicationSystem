@@ -6,7 +6,8 @@ from wtforms import SelectField
 from wtforms.validators import ValidationError
 # Внутренние модули
 from web_app.src.models import Management, UserRole
-from web_app.src.crud import sql_chek_update_role_by_user_id, sql_get_users_without_role
+from web_app.src.crud import (sql_chek_update_role_by_user_id, sql_get_users_without_role,
+                              sql_update_role_by_user_id)
 
 
 class ManagementAdmin(ModelView, model=Management):
@@ -18,6 +19,7 @@ class ManagementAdmin(ModelView, model=Management):
     column_labels = {
         Management.id: "Идентификатор",
         Management.user: "Пользователь",
+        "management_departments_count": "Количество сотрудников управления отдела",
         "requests_count": "Количество заявок"
     }
 
@@ -31,6 +33,8 @@ class ManagementAdmin(ModelView, model=Management):
 
     column_formatters_detail = {
         Management.user: lambda m, a: m.user.full_name if m.user else "Не назначен",
+        "management_departments_count": lambda m, a: len(m.management_departments) \
+            if hasattr(m, 'management_departments') and m.management_departments else 0,
         "requests_count": lambda m, a: len(m.management_requests) if hasattr(m, 'management_requests')
                                                                 and m.management_requests else 0
     }
@@ -42,6 +46,7 @@ class ManagementAdmin(ModelView, model=Management):
     column_details_list = [
         Management.id,
         Management.user,
+        "management_departments_count",
         "requests_count"
     ]
 
@@ -61,7 +66,10 @@ class ManagementAdmin(ModelView, model=Management):
     page_size_options = [10, 25, 50, 100]
 
     async def on_model_change(self, data, model, is_created, request):
-        if is_created and 'user' in data and data['user'].isdigit():
+        if is_created and 'user' in data:
+            if not isinstance(data['user'], int) and not data['user'].isdigit():
+                raise ValidationError(f"Неверно выбран пользователь!")
+
             existing = await sql_chek_update_role_by_user_id(
                 user_id=int(data['user']),
                 role=UserRole.MANAGEMENT
@@ -73,14 +81,19 @@ class ManagementAdmin(ModelView, model=Management):
         form_class = await super().scaffold_form(form_type)
         users = await sql_get_users_without_role()
 
-        form_class.user = SelectField(
-            label='Пользователь',
-            description='Выберите пользователя',
-            choices=[(user.id, str(user)) for user in users],
-            coerce=int,
-            filters=[],
-            default=None,
-            render_kw={'class ': 'form-control'}
-        )
+        if 'user' in form_type:
+            form_class.user = SelectField(
+                label='Пользователь',
+                description='Выберите пользователя',
+                choices=[(user.id, str(user)) for user in users],
+                coerce=int,
+                filters=[],
+                default=None,
+                render_kw={'class ': 'form-control'}
+            )
 
         return form_class
+
+    async def on_model_delete(self, model, request):
+        if model.user:
+            await sql_update_role_by_user_id(user_id=model.user.id, role=None)

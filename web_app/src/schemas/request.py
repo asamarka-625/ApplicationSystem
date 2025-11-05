@@ -7,11 +7,33 @@ from web_app.src.models import TYPE_MAPPING
 from web_app.src.schemas.user import UserResponse
 
 
+# Схема предметов заявки
+class ItemsRequest(BaseModel):
+    id: Annotated[int, Field(ge=1)]
+    quantity: Annotated[int, Field(ge=1)]
+
+
+# Схема названий предметов заявки
+class ItemsNameRequest(BaseModel):
+    name: Annotated[str, Field(strict=True, strip_whitespace=True)]
+    quantity: Annotated[int, Field(ge=1)]
+
+
+# Схема вложений заявки
+class AttachmentsRequest(BaseModel):
+    file_name: Annotated[str, Field(strict=True, strip_whitespace=True)]
+    content_type: Annotated[str, Field(strict=True, strip_whitespace=True)]
+    file_path: Annotated[str, Field(strict=True, strip_whitespace=True)]
+    size: Annotated[int, Field(ge=0)]
+
+
 # Схема запроса на создание заявки
 class CreateRequest(BaseModel):
-    items: List[Annotated[int, Field(ge=1)]]
+    items: Optional[List[ItemsRequest]] = None
+    is_emergency: bool = False
     description: Annotated[str, Field(strict=True, strip_whitespace=True)]
     request_type: Annotated[int, Field(ge=0, lt=len(TYPE_MAPPING))]
+    attachments: Optional[List[AttachmentsRequest]] = None
 
 
 # Схема ответа прав на действия с заявкой
@@ -58,7 +80,7 @@ class RequestDetailResponse(BaseModel):
     registration_number: Annotated[str, Field(strict=True, strip_whitespace=True)]
     request_type: Dict[str, str]
     status: Dict[str, str]
-    items: List[str]
+    items: List[ItemsNameRequest]
     description: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
     description_executor: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
     department_name: Annotated[str, Field(strict=True, strip_whitespace=True)]
@@ -71,12 +93,13 @@ class RequestDetailResponse(BaseModel):
     updated_at: Optional[datetime]
     completed_at: Optional[datetime]
     is_emergency: bool
+    attachments: Optional[List[AttachmentsRequest]] = None
     history: List[RequestHistoryResponse]
 
 
 # Схема запроса на назначение исполнителя
 class RedirectRequest(BaseModel):
-    executor: Annotated[int, Field(ge=1)]
+    user_role_id: Annotated[int, Field(ge=1)]
     description: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
 
 

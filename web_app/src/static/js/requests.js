@@ -228,7 +228,7 @@ function displayRequests(data) {
                             <i class="fa-solid fa-thumbs-up"></i> Утвердить
                         </button>` : ''}
                     ${rights.redirect && request.rights.redirect ? `
-                        <a class="btn-redirect" href="/request/${request.registration_number}/redirect">
+                        <a class="btn-redirect" href="/request/${request.registration_number}/redirect/management">
                             <i class="fa-solid fa-calendar-check"></i> Назначить исполнителя
                         </a> ` : ''}
                     ${rights.deadline && request.rights.deadline ? `

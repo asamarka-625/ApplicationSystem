@@ -9,13 +9,14 @@ from sqlalchemy.exc import SQLAlchemyError, NoResultFound
 from fastapi import HTTPException, status
 # Внутренние модули
 from web_app.src.core import config
-from web_app.src.models import (Request, TYPE_ID_MAPPING, request_item, RequestHistory,
-                                RequestAction, RequestStatus, TYPE_MAPPING, STATUS_MAPPING, User, RequestType,
-                                Secretary, Judge, Management, Executor, Item, UserRole)
+from web_app.src.models import (Request, TYPE_ID_MAPPING, request_item, RequestItem, RequestHistory,
+                                RequestType, RequestDocument, RequestAction, RequestStatus, TYPE_MAPPING,
+                                STATUS_MAPPING, User, Secretary, Judge, Management, Executor, Item, UserRole,
+                                ManagementDepartment)
 from web_app.src.core import connection
 from web_app.src.schemas import (CreateRequest, RequestResponse, RequestDetailResponse,
                                  RequestHistoryResponse, RequestDataResponse, RightsResponse,
-                                 RedirectRequest, UserResponse)
+                                 RedirectRequest, UserResponse, AttachmentsRequest, ItemsNameRequest)
 
 
 # Создаем новую заявку
@@ -37,11 +38,19 @@ async def sql_create_request(
         if request_type is None:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid request type")
 
+        if request_type == RequestType.MATERIAL:
+            if not (data.items and data.description == '' and not data.is_emergency):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid request")
+
+        elif request_type == RequestType.TECHNICAL:
+            if not (data.items is None and len(data.description) > 0):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid request")
+
         new_request = Request(
             registration_number=str(uuid.uuid4()),
             description=data.description,
             request_type=request_type,
-            is_emergency=request_type == RequestType.EMERGENCY,
+            is_emergency=data.is_emergency,
             secretary_id=secretary_id,
             judge_id=judge_id,
             department_id=department_id
@@ -49,12 +58,25 @@ async def sql_create_request(
         session.add(new_request)
         await session.flush()
 
-        for item_id in data.items:
-            # Связываем предметы с заявкой
-            await session.execute(request_item.insert().values(
-                request_id=new_request.id,
-                item_id=item_id
-            ))
+        if data.items:
+            for item in data.items:
+                # Связываем предметы с заявкой
+                await session.execute(request_item.insert().values(
+                    request_id=new_request.id,
+                    item_id=item.id,
+                    count=item.quantity
+                ))
+
+        if data.attachments:
+            for attachment in data.attachments:
+                new_document = RequestDocument(
+                    document_type=attachment.content_type,
+                    file_path=attachment.file_path,
+                    file_name=attachment.file_name,
+                    size=attachment.size,
+                    request_id=new_request.id
+                )
+                session.add(new_document)
 
         new_history = RequestHistory(
             action=RequestAction.REGISTERED,
@@ -107,7 +129,7 @@ async def sql_get_requests_by_user(
             query = query.where(Request.executor_id == user.executor_profile.id)
 
         else:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not enough rights")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
         if status_filter and status_filter != "all" and STATUS_MAPPING.get(status_filter):
             query = query.where(Request.status == STATUS_MAPPING[status_filter])
@@ -174,12 +196,13 @@ async def sql_get_request_details(
             sa.select(Request)
             .where(Request.registration_number == registration_number)
             .options(
-                so.selectinload(Request.items),
+                so.selectinload(Request.item_associations).joinedload(RequestItem.item),
                 so.joinedload(Request.secretary).joinedload(Secretary.user),
                 so.joinedload(Request.judge).joinedload(Judge.user),
                 so.joinedload(Request.management).joinedload(Management.user),
                 so.joinedload(Request.executor).joinedload(Executor.user),
                 so.joinedload(Request.department),
+                so.selectinload(Request.related_documents),
                 so.selectinload(Request.history).joinedload(RequestHistory.user)
             )
         )
@@ -196,7 +219,13 @@ async def sql_get_request_details(
                 "name": request.status.name,
                 "value": request.status.value
             },
-            items=[f"{item.name} {item.description}" for item in request.items],
+            items=[
+                ItemsNameRequest(
+                    name=f"{association.item.name} {association.item.description}".strip(),
+                    quantity=association.count
+                )
+                for association in request.item_associations
+            ],
             description=request.description,
             description_executor=request.description_executor if \
                 role in (UserRole.MANAGEMENT, UserRole.EXECUTOR) else None,
@@ -222,6 +251,15 @@ async def sql_get_request_details(
             updated_at=request.update_at,
             completed_at=request.completed_at,
             is_emergency=request.is_emergency,
+            attachments=[
+                AttachmentsRequest(
+                    file_name=attachment.file_name,
+                    content_type=attachment.document_type,
+                    file_path=attachment.file_path,
+                    size=attachment.size
+                )
+                for attachment in request.related_documents
+            ],
             history=[
                 RequestHistoryResponse(
                     created_at=h.created_at,
@@ -263,7 +301,7 @@ async def sql_get_request_data(
             sa.select(Request)
             .where(Request.registration_number == registration_number)
             .options(
-                so.selectinload(Request.items)
+                so.selectinload(Request.item_associations).joinedload(RequestItem.item),
             )
         )
 
@@ -275,8 +313,12 @@ async def sql_get_request_data(
                 (type_ for type_ in TYPE_ID_MAPPING if type_["name"].lower() == request.request_type.value),
             ),
             items=[
-                {"id": item.id, "name": item.name, "description": item.description}
-                for item in request.items
+                {
+                    "id": association.item.id,
+                    "name": association.item.name,
+                    "description": association.item.description
+                }
+                for association in request.item_associations
             ],
             description=request.description
         )
@@ -316,14 +358,14 @@ async def sql_edit_request(
             query = query.where(Request.judge_id == role_id)
 
         else:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not enough rights")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
         request_result = await session.execute(query)
 
         request = request_result.scalar_one()
 
         if request.status != RequestStatus.REGISTERED:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not enough rights")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
         list_update = []
 
@@ -501,14 +543,14 @@ async def sql_reject_request(
             query = query.where(Request.management_id == role_id)
 
         else:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not enough rights")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
         request_result = await session.execute(query)
 
         request = request_result.scalar_one()
 
         if request.status in (RequestStatus.COMPLETED, RequestStatus.CANCELLED):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not enough rights")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
         request.status = RequestStatus.CANCELLED
 
@@ -541,10 +583,11 @@ async def sql_reject_request(
 
 # Назначение исполнителя заявки
 @connection
-async def sql_redirect_request(
+async def sql_redirect_executor_request(
         registration_number: str,
         user_id: int,
         management_id: int,
+        role: UserRole,
         data: RedirectRequest,
         session: AsyncSession
 ) -> None:
@@ -561,7 +604,7 @@ async def sql_redirect_request(
         executor_user_result = await session.execute(
             sa.select(User)
             .join(Executor, Executor.user_id == User.id)
-            .where(Executor.id == data.executor)
+            .where(Executor.id == data.user_role_id)
         )
         executor_user = executor_user_result.scalar_one_or_none()
 
@@ -569,11 +612,20 @@ async def sql_redirect_request(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Executor not found")
 
         if request.status in (RequestStatus.REGISTERED, RequestStatus.CANCELLED):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not enough rights")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
         request.status = RequestStatus.IN_PROGRESS
-        request.management_id = management_id
-        request.executor_id = data.executor
+
+        if role == role.MANAGEMENT_DEPARTMENT:
+            request.management_department_id = management_id
+
+        elif role == role.MANAGEMENT:
+            request.management_id = management_id
+
+        else:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
+
+        request.executor_id = data.user_role_id
         request.description_executor = data.description
 
         new_history = RequestHistory(
@@ -591,14 +643,78 @@ async def sql_redirect_request(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found")
 
     except SQLAlchemyError as e:
-        config.logger.error(f"Database error redirect request: {e}")
+        config.logger.error(f"Database error redirect executor request: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
     except HTTPException:
         raise
 
     except Exception as e:
-        config.logger.error(f"Unexpected error redirect request: {e}")
+        config.logger.error(f"Unexpected error redirect executor request: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
+
+
+# Назначение сотрудника управления отдела
+@connection
+async def sql_redirect_management_request(
+        registration_number: str,
+        user_id: int,
+        management_id: int,
+        data: RedirectRequest,
+        session: AsyncSession
+) -> None:
+    try:
+        request_result = await session.execute(
+            sa.select(Request)
+            .where(
+                Request.registration_number == registration_number
+            )
+        )
+
+        request = request_result.scalar_one()
+
+        management_department_user_result = await session.execute(
+            sa.select(User)
+            .join(ManagementDepartment, ManagementDepartment.user_id == User.id)
+            .where(ManagementDepartment.id == data.user_role_id)
+        )
+        management_department_user = management_department_user_result.scalar_one_or_none()
+
+        if management_department_user is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Management not found")
+
+        if request.status in (RequestStatus.REGISTERED, RequestStatus.CANCELLED):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
+
+        request.status = RequestStatus.IN_PROGRESS
+        request.management_id = management_id
+        request.management_department_id = data.user_role_id
+        request.description_management_department = data.description
+
+        new_history = RequestHistory(
+            action=RequestAction.IN_PROGRESS,
+            request_id=request.id,
+            user_id=user_id,
+            description=("Заявке назначен сотрудник управления отдела\n"
+                         f"Исполнитель: {management_department_user.full_name}")
+        )
+        session.add(new_history)
+
+        await session.commit()
+
+    except NoResultFound:
+        config.logger.info(f"Request not found by registration_number: {registration_number}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found")
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error redirect management request: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error redirect management request: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
 
 
@@ -621,7 +737,7 @@ async def sql_deadline_request(
         request = request_result.scalar_one()
 
         if request.status in (RequestStatus.REGISTERED, RequestStatus.CANCELLED):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not enough rights")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
         request.deadline = deadline
 
@@ -669,7 +785,7 @@ async def sql_execute_request(
         request = request_result.scalar_one()
 
         if request.status != RequestStatus.IN_PROGRESS:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not enough rights")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
         request.status = RequestStatus.COMPLETED
 

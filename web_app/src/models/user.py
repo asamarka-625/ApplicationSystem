@@ -14,14 +14,18 @@ class UserRole(enum.Enum):
     SECRETARY = "секретарь суда"
     JUDGE = "мировой судья"
     MANAGEMENT = "сотрудник управления"
+    MANAGEMENT_DEPARTMENT = "сотрудник управления отдела" # new
     EXECUTOR = "исполнитель"
+    EXECUTOR_ORGANIZATION= "организация-исполнитель" # new
 
 
 ROLE_MAPPING = {
     "секретарь суда": UserRole.SECRETARY,
     "мировой судья": UserRole.JUDGE,
     "сотрудник управления": UserRole.MANAGEMENT,
-    "исполнитель": UserRole.EXECUTOR
+    "сотрудник управления отдела": UserRole.MANAGEMENT_DEPARTMENT,
+    "исполнитель": UserRole.EXECUTOR,
+    "организация-исполнитель": UserRole.EXECUTOR_ORGANIZATION
 }
 
 
@@ -100,8 +104,20 @@ class User(Base):
         uselist=False,
         cascade="all, delete-orphan"
     )
+    management_department_profile: so.Mapped[Optional["ManagementDepartment"]] = so.relationship(
+        "ManagementDepartment",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan"
+    )
     executor_profile: so.Mapped[Optional["Executor"]] = so.relationship(
         "Executor",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan"
+    )
+    executor_organization_profile: so.Mapped[Optional["ExecutorOrganization"]] = so.relationship(
+        "ExecutorOrganization",
         back_populates="user",
         uselist=False,
         cascade="all, delete-orphan"
@@ -115,31 +131,34 @@ class User(Base):
 
     # Вспомогательные свойства для проверки прав
     @property
-    def is_management(self) -> bool:
-        return self.role == UserRole.MANAGEMENT
+    def is_secretary(self) -> bool:
+        return self.role == UserRole.SECRETARY
 
     @property
     def is_judge(self) -> bool:
         return self.role == UserRole.JUDGE
 
+
     @property
-    def is_secretary(self) -> bool:
-        return self.role == UserRole.SECRETARY
+    def is_management(self) -> bool:
+        return self.role == UserRole.MANAGEMENT
+
+    @property
+    def is_management_department(self) -> bool:
+        return self.role == UserRole.MANAGEMENT_DEPARTMENT
 
     @property
     def is_executor(self) -> bool:
         return self.role == UserRole.EXECUTOR
 
     @property
+    def is_executor_organization(self) -> bool:
+        return self.role == UserRole.EXECUTOR_ORGANIZATION
+
+    @property
     def profile_str(self):
-        if self.is_judge:
-            return UserRole.JUDGE.value
-        elif self.is_secretary:
-            return UserRole.SECRETARY.value
-        elif self.is_management:
-            return UserRole.MANAGEMENT.value
-        elif self.is_executor:
-            return UserRole.EXECUTOR.value
+        if self.role:
+            return self.role.value
         return "Без роли"
 
 
@@ -277,6 +296,10 @@ class Management(Base):
         back_populates="management_profile",
         lazy='joined'
     )
+    management_departments: so.Mapped[List["ManagementDepartment"]] = so.relationship(
+        "ManagementDepartment",
+        back_populates="management"
+    )
     management_requests: so.Mapped[List["Request"]] = so.relationship(
         "Request",
         back_populates="management",
@@ -287,7 +310,59 @@ class Management(Base):
         return f"<Management(id={self.id})>"
 
     def __str__(self):
-        return f"{UserRole.MANAGEMENT} ({self.id})"
+        return f"{self.user.full_name} ({self.user.role.value})"
+
+
+# Модель сотрудника управления отдела
+class ManagementDepartment(Base):
+    __tablename__ = "management_departments"
+
+    id: so.Mapped[int] = so.mapped_column(sa.Integer, primary_key=True)
+    division: so.Mapped[str] = so.mapped_column(
+        sa.String(128),
+        nullable=False
+    )
+
+    # Внешние ключи
+    user_id: so.Mapped[int] = so.mapped_column(
+        sa.Integer,
+        sa.ForeignKey("users.id"),
+        unique=True,
+        nullable=False,
+        index=True
+    )
+    management_id: so.Mapped[int] = so.mapped_column(
+        sa.Integer,
+        sa.ForeignKey("management.id"),
+        nullable=False,
+        index=True
+    )
+
+    # Связи
+    user: so.Mapped["User"] = so.relationship(
+        "User",
+        back_populates="management_department_profile",
+        lazy='joined'
+    )
+    management: so.Mapped["Management"] = so.relationship(
+        "Management",
+        back_populates="management_departments"
+    )
+    executors: so.Mapped[List["Executor"]] = so.relationship(
+        "Executor",
+        back_populates="management_department"
+    )
+    management_department_requests: so.Mapped[List["Request"]] = so.relationship(
+        "Request",
+        back_populates="management_department",
+        foreign_keys="Request.management_department_id"
+    )
+
+    def __repr__(self):
+        return f"<ManagementDepartment(id={self.id})>"
+
+    def __str__(self):
+        return f"{self.user.full_name} ({self.division})"
 
 
 # Модель исполнителя
@@ -308,12 +383,22 @@ class Executor(Base):
         nullable=False,
         index=True
     )
+    management_department_id: so.Mapped[int] = so.mapped_column(
+        sa.Integer,
+        sa.ForeignKey("management_departments.id"),
+        nullable=False,
+        index=True
+    )
 
     # Связи
     user: so.Mapped["User"] = so.relationship(
         "User",
         back_populates="executor_profile",
         lazy='joined'
+    )
+    management_department: so.Mapped["ManagementDepartment"] = so.relationship(
+        "ManagementDepartment",
+        back_populates="executors"
     )
     executor_requests: so.Mapped[List["Request"]] = so.relationship(
         "Request",
@@ -325,4 +410,42 @@ class Executor(Base):
         return f"<Executor(id={self.id})>"
 
     def __str__(self):
-        return f"{UserRole.EXECUTOR} ({self.id})"
+        return f"{UserRole.EXECUTOR} ({self.position})"
+
+
+# Модель организации-исполнителя
+class ExecutorOrganization(Base):
+    __tablename__ = "executor_organizations"
+
+    id: so.Mapped[int] = so.mapped_column(sa.Integer, primary_key=True)
+    name: so.Mapped[str] = so.mapped_column(
+        sa.String(128),
+        nullable=False
+    )
+
+    # Внешние ключи
+    user_id: so.Mapped[int] = so.mapped_column(
+        sa.Integer,
+        sa.ForeignKey("users.id"),
+        unique=True,
+        nullable=False,
+        index=True
+    )
+
+    # Связи
+    user: so.Mapped["User"] = so.relationship(
+        "User",
+        back_populates="executor_organization_profile",
+        lazy='joined'
+    )
+    executor_organization_requests: so.Mapped[List["Request"]] = so.relationship(
+        "Request",
+        back_populates="executor_organization",
+        foreign_keys="Request.executor_organization_id"
+    )
+
+    def __repr__(self):
+        return f"<ExecutorOrganization(id={self.id})>"
+
+    def __str__(self):
+        return f"{UserRole.EXECUTOR_ORGANIZATION} ({self.name})"

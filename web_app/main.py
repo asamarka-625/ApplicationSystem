@@ -9,16 +9,21 @@ from web_app.src.core import config, engine, setup_database
 from web_app.src.routers import router
 from web_app.src.admin import (UserAdmin, ItemAdmin, CategoryAdmin, DepartmentAdmin,
                                RequestAdmin, SecretaryAdmin, JudgeAdmin, ManagementAdmin,
-                               ExecutorAdmin)
+                               ExecutorAdmin, ManagementDepartmentAdmin, ExecutorOrganizationAdmin)
+from web_app.src.middlewares import AuthenticationMiddleware
+from web_app.src.utils import token_service
+
 
 
 async def startup():
-    config.logger.info("Инициализируем базу данных...")
+    config.logger.info("Запускаем приложение...")
     await setup_database()
+    await token_service.init_redis()
 
 
 async def shutdown():
     config.logger.info("Останавливаем приложение...")
+    await token_service.close_redis()
 
 
 @asynccontextmanager
@@ -46,12 +51,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(AuthenticationMiddleware, login_url="/login")
+
 admin = Admin(app, engine)
 admin.add_view(UserAdmin)
 admin.add_view(SecretaryAdmin)
 admin.add_view(JudgeAdmin)
 admin.add_view(ManagementAdmin)
+admin.add_view(ManagementDepartmentAdmin)
 admin.add_view(ExecutorAdmin)
+admin.add_view(ExecutorOrganizationAdmin)
 
 admin.add_view(CategoryAdmin)
 admin.add_view(ItemAdmin)

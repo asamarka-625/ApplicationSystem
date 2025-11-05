@@ -1,4 +1,5 @@
 # Внешние зависимости
+from typing import Dict, List, Set
 from dataclasses import dataclass, field
 from dotenv import load_dotenv
 import os
@@ -13,12 +14,40 @@ load_dotenv()
 @dataclass
 class Config:
     _database_url: str = field(default_factory=lambda: os.getenv("DATABASE_URL"))
+    _redis_url: str = field(default_factory=lambda : os.getenv("REDIS_URL"))
     logger: logging.Logger = field(init=False)
     SECRET_KEY: str = field(default_factory=lambda: os.getenv("SECRET_KEY"))
     ALGORITHM: str = field(default_factory=lambda: os.getenv("ALGORITHM"))
     ACCESS_TOKEN_EXPIRE_MINUTES: int = field(default_factory=lambda: int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")))
-    active_session_tokens: dict = field(default=dict)
-    blacklisted_tokens: set = field(default_factory=set)
+
+    USER_DOCUMENTS: str = "web_app/src/static/user_documents/"
+    ALLOWED_MIME_TYPES: Dict[str, List[str]] = field(default_factory=lambda: {
+        'image': [
+            'image/jpeg',
+            'image/png',
+            'image/gif',
+            'image/bmp',
+            'image/webp'
+        ],
+        'video': [
+            'video/mp4',
+            'video/avi',
+            'video/mov',
+            'video/webm'
+        ]
+    })
+
+    # Разрешенные расширения файлов (дополнительная проверка)
+    ALLOWED_EXTENSIONS: Set[str] = field(default_factory=lambda: {
+        '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp',
+        '.mp4', '.avi', '.mov', '.webm'
+    })
+
+    # Максимальные размеры для разных типов файлов (в байтах)
+    MAX_FILE_SIZES: Dict[str, int] = field(default_factory=lambda: {
+        'image': 5 * 1024 * 1024,  # 5MB
+        'video': 50 * 1024 * 1024,  # 50MB
+    })
 
     def __post_init__(self):
         self.logger = setup_logger(
@@ -42,6 +71,10 @@ class Config:
     @property
     def DATABASE_URL(self) -> str:
         return self._database_url
+
+    @property
+    def REDIS_URL(self) -> str:
+        return self._redis_url
 
     def __str__(self) -> str:
         return f"Config(database={self._database_url}, log_level={self.logger.level})"

@@ -52,7 +52,7 @@ async def sql_chek_existing_user_by_email(email: str, session: AsyncSession) -> 
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
 
 
-# Проверяем, существует ли судья с таким user_id
+# Проверяем, существует ли пользователь по user_id с ролью, и обновляем роль
 @connection
 async def sql_chek_update_role_by_user_id(
         user_id: int,
@@ -86,6 +86,37 @@ async def sql_chek_update_role_by_user_id(
 
     except Exception as e:
         config.logger.error(f"Unexpected error reading user by user_id {user_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
+
+
+# Обновляем роль пользователю
+@connection
+async def sql_update_role_by_user_id(
+        user_id: int,
+        role: UserRole,
+        session: AsyncSession
+) -> None:
+    try:
+        user_result = await session.execute(
+            sa.select(User)
+            .where(User.id == user_id)
+        )
+
+        user = user_result.scalar_one()
+        user.role = role
+
+        await session.commit()
+
+    except NoResultFound:
+        config.logger.info(f"User not found by ID: {user_id}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error update role by user_id {user_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error update role by user_id {user_id}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
 
 

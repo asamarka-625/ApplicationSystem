@@ -7,7 +7,7 @@ from wtforms.validators import ValidationError
 # Внутренние модули
 from web_app.src.models import Secretary, UserRole
 from web_app.src.crud import (sql_chek_update_role_by_user_id, sql_get_department_id_by_judge_id,
-                              sql_get_users_without_role)
+                              sql_get_users_without_role, sql_update_role_by_user_id)
 
 
 class SecretaryAdmin(ModelView, model=Secretary):
@@ -82,7 +82,10 @@ class SecretaryAdmin(ModelView, model=Secretary):
     page_size_options = [10, 25, 50, 100]
 
     async def on_model_change(self, data, model, is_created, request):
-        if is_created and 'user' in data and data['user'].isdigit():
+        if is_created and 'user' in data:
+            if not isinstance(data['user'], int) and not data['user'].isdigit():
+                raise ValidationError(f"Неверно выбран пользователь!")
+
             existing = await sql_chek_update_role_by_user_id(
                 user_id=int(data['user']),
                 role=UserRole.SECRETARY
@@ -99,14 +102,19 @@ class SecretaryAdmin(ModelView, model=Secretary):
         form_class = await super().scaffold_form(form_type)
         users = await sql_get_users_without_role()
 
-        form_class.user = SelectField(
-            label='Пользователь',
-            description='Выберите пользователя',
-            choices=[(user.id, str(user)) for user in users],
-            coerce=int,
-            filters=[],
-            default=None,
-            render_kw={'class ': 'form-control'}
-        )
+        if 'user' in form_type:
+            form_class.user = SelectField(
+                label='Пользователь',
+                description='Выберите пользователя',
+                choices=[(user.id, str(user)) for user in users],
+                coerce=int,
+                filters=[],
+                default=None,
+                render_kw={'class ': 'form-control'}
+            )
 
         return form_class
+
+    async def on_model_delete(self, model, request):
+        if model.user:
+            await sql_update_role_by_user_id(user_id=model.user.id, role=None)

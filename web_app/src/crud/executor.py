@@ -1,7 +1,6 @@
 # Внешние зависимости
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import sqlalchemy as sa
-import sqlalchemy.orm as so
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 from fastapi import HTTPException, status
@@ -11,15 +10,19 @@ from web_app.src.models import Executor, User
 from web_app.src.core import connection
 
 
-# Поиск исполнителей по имени
+# Вывод исполнителей
 @connection
-async def sql_search_executors(search: str, session: AsyncSession) -> List[Dict[str, Any]]:
+async def sql_get_executors(
+        session: AsyncSession,
+        management_department_id: Optional[int] = None
+) -> List[Dict[str, Any]]:
     try:
-        names_result = await session.execute(
-            sa.select(Executor.id, Executor.position, User.full_name)
-            .join(Executor.user)
-            .where(User.full_name.ilike(f"%{search}%"))
-        )
+        query = sa.select(Executor.id, Executor.position, User.full_name).join(Executor.user)
+
+        if management_department_id is not None:
+            query = query.where(Executor.management_department_id == management_department_id)
+
+        names_result = await session.execute(query)
 
         return [
             {"id": i, "position": position, "full_name": full_name}
@@ -27,9 +30,9 @@ async def sql_search_executors(search: str, session: AsyncSession) -> List[Dict[
         ]
 
     except SQLAlchemyError as e:
-        config.logger.error(f"Database error search executors: {e}")
+        config.logger.error(f"Database error get all executors: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
     except Exception as e:
-        config.logger.error(f"Unexpected error search executors: {e}")
+        config.logger.error(f"Unexpected error get all executors: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")

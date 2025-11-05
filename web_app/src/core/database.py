@@ -13,7 +13,7 @@ AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=As
 
 # Инициализируем таблицы
 async def setup_database():
-    config.logger.info(f"Инициализируем таблицы")
+    config.logger.info("Инициализируем таблицы")
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

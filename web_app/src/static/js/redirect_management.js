@@ -3,24 +3,21 @@ const API_BASE_URL = '/api/v1/request';
 
 function getRegistrationNumberFromUrl() {
     const url = window.location.href;
-
     const parts = url.split('/');
-    const registrationNumber = parts[parts.length - 2];
-
+    const registrationNumber = parts[parts.length - 3];
     return registrationNumber;
 }
 
-async function submitExecutorAssignment(registrationNumber, executorId, executorComment) {
+async function submitManagementAssignment(registrationNumber, managementId, managementComment) {
     try {
-        console.log(executorId, executorComment);
-        const response = await fetch(`${API_BASE_URL}/redirect/${registrationNumber}`, {
+        const response = await fetch(`${API_BASE_URL}/redirect/management/${registrationNumber}`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                executor: executorId,
-                description: executorComment || ''
+                user_role_id: managementId,
+                description: managementComment || ''
             })
         });
 
@@ -33,120 +30,91 @@ async function submitExecutorAssignment(registrationNumber, executorId, executor
         return data;
 
     } catch (error) {
-        console.error('Ошибка назначения исполнителя:', error);
+        console.error('Ошибка назначения сотрудника:', error);
         throw error;
     }
 }
 
-// Функция поиска исполнителей
-async function searchExecutors(query, suggestionsContainer, input) {
+// Функция загрузки списка сотрудников управления
+async function loadManagements() {
     try {
-        if (query.length < 2) {
-            hideSuggestions(suggestionsContainer);
-            return;
-        }
-
-        showLoading(true);
-        const response = await fetch(`${API_URL}/executor/?search=${encodeURIComponent(query)}`);
-
+        const response = await fetch(`${API_URL}/managements`);
         if (!response.ok) {
             throw new Error('Ошибка сети');
         }
-
         const results = await response.json();
-        displaySuggestions(results, suggestionsContainer, input);
-
+        displayManagementList(results);
     } catch (error) {
-        console.error('Ошибка поиска:', error);
-        hideSuggestions(suggestionsContainer);
-    } finally {
-        showLoading(false);
+        console.error('Ошибка загрузки сотрудников:', error);
+        showNotification('Ошибка загрузки списка сотрудников', 'error');
     }
 }
 
-// Функция отображения подсказок
-function displaySuggestions(executors, suggestionsContainer, input) {
-    if (!executors || executors.length === 0) {
-        suggestionsContainer.innerHTML = '<div class="suggestion-item">Исполнители не найдены</div>';
+// Функция отображения списка сотрудников
+function displayManagementList(managements) {
+    const suggestionsContainer = document.querySelector('.suggestions-container');
+
+    if (!managements || managements.length === 0) {
+        suggestionsContainer.innerHTML = '<div class="suggestion-item">Сотрудники не найдены</div>';
         suggestionsContainer.style.display = 'block';
         return;
     }
 
-    const suggestionsHTML = executors.map(executor => `
-        <div class="suggestion-item" data-executor-id="${executor.id}">
-            <strong>${executor.full_name || executor.name}</strong>
-            ${executor.position ? `<br><small>${executor.position}</small>` : ''}
-            ${executor.department ? `<br><small>${executor.department}</small>` : ''}
+    const suggestionsHTML = managements.map(management => `
+        <div class="suggestion-item" data-management-id="${management.id}">
+            <strong>${management.full_name}</strong>
+            ${management.division ? `<small>${management.division}</small>` : ''}
         </div>
     `).join('');
 
     suggestionsContainer.innerHTML = suggestionsHTML;
     suggestionsContainer.style.display = 'block';
 
-    // Добавляем обработчики клика на подсказки
+    // Добавляем обработчики клика на элементы списка
     suggestionsContainer.querySelectorAll('.suggestion-item').forEach(item => {
         item.addEventListener('click', function() {
-            const executorId = this.getAttribute('data-executor-id');
-            const executorName = this.querySelector('strong').textContent;
+            const managementId = this.getAttribute('data-management-id');
+            const managementName = this.querySelector('strong').textContent;
 
             // Заполняем поле ввода
-            input.value = executorName;
-            // Сохраняем ID в data-атрибут
-            input.setAttribute('data-executor-id', executorId);
+            const managementInput = document.querySelector('.request-management-input');
+            managementInput.value = managementName;
+            managementInput.setAttribute('data-management-id', managementId);
 
             hideSuggestions(suggestionsContainer);
         });
     });
 }
 
-// Функция скрытия подсказок
+// Функция скрытия списка
 function hideSuggestions(suggestionsContainer) {
     suggestionsContainer.style.display = 'none';
-}
-
-// Функция показа/скрытия загрузки
-function showLoading(show) {
-    // Реализуйте отображение индикатора загрузки по необходимости
-    console.log('Loading:', show);
 }
 
 // Инициализация после загрузки DOM
 document.addEventListener('DOMContentLoaded', function() {
     const registrationNumber = getRegistrationNumberFromUrl();
     document.getElementById('registrationNumber').textContent = registrationNumber;
-    const executorInput = document.querySelector('.request-executor-input');
+
+    const managementInput = document.querySelector('.request-management-input');
     const suggestionsContainer = document.querySelector('.suggestions-container');
 
-    if (!executorInput || !suggestionsContainer) return;
+    if (!managementInput || !suggestionsContainer) return;
 
-    // Обработчик ввода текста
-    let searchTimeout;
-    executorInput.addEventListener('input', function() {
-        clearTimeout(searchTimeout);
-        const query = this.value.trim();
-
-        searchTimeout = setTimeout(() => {
-            searchExecutors(query, suggestionsContainer, this);
-        }, 300); // Задержка 300мс
-    });
-
-    // Обработчик фокуса
-    executorInput.addEventListener('focus', function() {
-        const query = this.value.trim();
-        if (query.length >= 2) {
-            searchExecutors(query, suggestionsContainer, this);
-        }
+    // Загружаем список сотрудников при фокусе на поле
+    managementInput.addEventListener('focus', function() {
+        loadManagements();
     });
 
     // Обработчик клика вне поля
     document.addEventListener('click', function(event) {
-        if (!event.target.closest('.executor-input-wrapper')) {
+        if (!event.target.closest('.management-input-wrapper')) {
             hideSuggestions(suggestionsContainer);
         }
     });
 
     // Обработчик клавиш (для навигации стрелками)
-    executorInput.addEventListener('keydown', function(event) {
+    managementInput.addEventListener('keydown', function(event) {
         const suggestions = suggestionsContainer.querySelectorAll('.suggestion-item');
         const activeSuggestion = suggestionsContainer.querySelector('.suggestion-item.active');
 
@@ -167,15 +135,14 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('requestForm').addEventListener('submit', async function(e) {
         e.preventDefault();
 
-        const executorInput = document.querySelector('.request-executor-input');
-        const executorId = executorInput.getAttribute('data-executor-id');
-        const executorName = executorInput.value;
-        const executorComment = document.getElementById('executorComment').value;
+        const managementInput = document.querySelector('.request-management-input');
+        const managementId = managementInput.getAttribute('data-management-id');
+        const managementComment = document.getElementById('managementComment').value;
 
         // Валидация
-        if (!executorId) {
-            showNotification('Пожалуйста, выберите исполнителя из списка', 'error');
-            executorInput.focus();
+        if (!managementId) {
+            showNotification('Пожалуйста, выберите сотрудника из списка', 'error');
+            managementInput.focus();
             return;
         }
 
@@ -193,24 +160,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             const registrationNumber = getRegistrationNumberFromUrl();
-            await submitExecutorAssignment(registrationNumber, executorId, executorComment);
+            await submitManagementAssignment(registrationNumber, managementId, managementComment);
 
-            showNotification('Исполнитель успешно назначен', 'success');
-
+            showNotification('Сотрудник успешно назначен', 'success');
             window.location.href = `/request/${registrationNumber}`;
 
         } catch (error) {
             console.error('Ошибка:', error);
-            showNotification(error.message || 'Ошибка при назначении исполнителя', 'error');
-
-            // Разблокируем кнопку при ошибке
+            showNotification(error.message || 'Ошибка при назначении сотрудника', 'error');
             submitButton.disabled = false;
             submitButton.innerHTML = originalText;
         }
     });
 });
 
-// Функция навигации по подсказкам стрелками
+// Функция навигации по списку стрелками
 function navigateSuggestions(direction, suggestions, activeSuggestion) {
     if (suggestions.length === 0) return;
 

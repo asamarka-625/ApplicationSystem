@@ -5,7 +5,6 @@ import sqlalchemy as sa
 import sqlalchemy.orm as so
 # Внутренние модули
 from web_app.src.models.base import Base
-from web_app.src.models.table import request_item
 
 
 # Модель Категории
@@ -82,12 +81,12 @@ class Item(Base):
         "Category",
         back_populates="items"
     )
-    requests: so.Mapped[Optional[List["Request"]]] = so.relationship(
-        "Request",
-        secondary=request_item,
-        back_populates="items",
+    request_associations: so.Mapped[List["RequestItem"]] = so.relationship(
+        "RequestItem",
+        back_populates="item",
+        viewonly=True
     )
-    
+
     def __repr__(self):
         return f"<Item(id={self.id}, serial='{self.serial_number}', name='{self.name}')>"
 

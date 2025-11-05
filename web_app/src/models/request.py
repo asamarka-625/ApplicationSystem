@@ -6,7 +6,7 @@ import sqlalchemy as sa
 import sqlalchemy.orm as so
 # Внутренние модули
 from web_app.src.models.base import Base
-from web_app.src.models.table import request_item
+from web_app.src.models.table import RequestItem
 
 
 # Enum для статуса заявки
@@ -22,8 +22,6 @@ class RequestStatus(enum.Enum):
 class RequestType(enum.Enum):
     MATERIAL = "материально-техническое обеспечение"
     TECHNICAL = "техническое обслуживание"
-    OPERATIONAL = "эксплуатационное обслуживание"
-    EMERGENCY = "аварийная"
 
 # Enum для действий, которые можно делать с заявкой
 class RequestAction(enum.Enum):
@@ -50,8 +48,6 @@ STATUS_MAPPING = {
 TYPE_MAPPING = {
     "материально-техническое обеспечение": RequestType.MATERIAL,
     "техническое обслуживание": RequestType.TECHNICAL,
-    "эксплуатационное обслуживание": RequestType.OPERATIONAL,
-    "аварийная": RequestType.EMERGENCY
 }
 
 STATUS_ID_MAPPING = [{"id": i, "name": name.capitalize()} for i, name in enumerate(STATUS_MAPPING.keys())]
@@ -71,6 +67,7 @@ class Request(Base):
     )
     description: so.Mapped[Optional[str]] = so.mapped_column(sa.Text, nullable=True)
     description_executor: so.Mapped[Optional[str]] = so.mapped_column(sa.Text, nullable=True)
+    description_management_department: so.Mapped[Optional[str]] = so.mapped_column(sa.Text, nullable=True)
     request_type: so.Mapped[RequestType] = so.mapped_column(
         sa.Enum(RequestType),
         nullable=False,
@@ -126,9 +123,21 @@ class Request(Base):
         nullable=True,
         index=True
     )
+    management_department_id: so.Mapped[Optional[int]] = so.mapped_column(
+        sa.Integer,
+        sa.ForeignKey("management_departments.id"),
+        nullable=True,
+        index=True
+    )
     executor_id: so.Mapped[Optional[int]] = so.mapped_column(
         sa.Integer,
         sa.ForeignKey("executors.id"),
+        nullable=True,
+        index=True
+    )
+    executor_organization_id: so.Mapped[Optional[int]] = so.mapped_column(
+        sa.Integer,
+        sa.ForeignKey("executor_organizations.id"),
         nullable=True,
         index=True
     )
@@ -152,9 +161,17 @@ class Request(Base):
         "Management",
         back_populates="management_requests"
     )
+    management_department: so.Mapped[Optional["ManagementDepartment"]] = so.relationship(
+        "ManagementDepartment",
+        back_populates="management_department_requests"
+    )
     executor: so.Mapped[Optional["Executor"]] = so.relationship(
         "Executor",
         back_populates="executor_requests"
+    )
+    executor_organization: so.Mapped[Optional["ExecutorOrganization"]] = so.relationship(
+        "ExecutorOrganization",
+        back_populates="executor_organization_requests"
     )
     department: so.Mapped["Department"] = so.relationship(
     "Department",
@@ -168,10 +185,10 @@ class Request(Base):
         "RequestHistory",
         back_populates="request",
     )
-    items: so.Mapped[List["Item"]] = so.relationship(
-        "Item",
-        secondary=request_item,
-        back_populates="requests"
+    item_associations: so.Mapped[List["RequestItem"]] = so.relationship(
+        "RequestItem",
+        back_populates="request",
+        viewonly=True
     )
 
     def __repr__(self):
@@ -196,6 +213,10 @@ class RequestDocument(Base):
     )
     file_name: so.Mapped[str] = so.mapped_column(
         sa.String,
+        nullable=False
+    )
+    size: so.Mapped[int] = so.mapped_column(
+        sa.Integer,
         nullable=False
     )
     created_at: so.Mapped[datetime] = so.mapped_column(

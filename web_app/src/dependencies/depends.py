@@ -8,6 +8,7 @@ from web_app.src.core import config
 from web_app.src.models import UserRole, User
 from web_app.src.crud import sql_get_user_by_id, sql_get_user_by_username
 from web_app.src.utils import verify_password
+from web_app.src.utils import token_service
 
 
 async def authenticate_user(username: str, password: str):
@@ -43,7 +44,7 @@ async def get_current_user(
     if not access_token:
         raise credentials_exception
 
-    if access_token in config.blacklisted_tokens:
+    if await token_service.is_blacklisted(access_token):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has been revoked"
@@ -66,7 +67,7 @@ async def get_current_user(
         raise credentials_exception
 
     if not user.is_active:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user")
 
     return user
 
@@ -86,7 +87,7 @@ def get_current_user_with_role(roles: Optional[Tuple[UserRole]] = None):
         if not access_token:
             raise credentials_exception
 
-        if access_token in config.blacklisted_tokens:
+        if await token_service.is_blacklisted(access_token):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token has been revoked"
