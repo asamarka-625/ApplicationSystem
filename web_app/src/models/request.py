@@ -14,9 +14,9 @@ class RequestStatus(enum.Enum):
     REGISTERED = "зарегистрирована"
     CONFIRMED = "подтверждена"
     IN_PROGRESS = "в работе"
+    PARTIALLY_FULFILLED = "частично выполнена"
     COMPLETED = "выполнена"
     CANCELLED = "отменена"
-    PLANNING = "запланирована"
 
 # Enum для типа заявки
 class RequestType(enum.Enum):
@@ -42,7 +42,7 @@ STATUS_MAPPING = {
     "в работе": RequestStatus.IN_PROGRESS,
     "выполнена": RequestStatus.COMPLETED,
     "отменена": RequestStatus.CANCELLED,
-    "запланирована": RequestStatus.PLANNING
+    "частично выполнена": RequestStatus.PARTIALLY_FULFILLED
 }
 
 TYPE_MAPPING = {
@@ -66,7 +66,6 @@ class Request(Base):
         nullable=False
     )
     description: so.Mapped[Optional[str]] = so.mapped_column(sa.Text, nullable=True)
-    description_executor: so.Mapped[Optional[str]] = so.mapped_column(sa.Text, nullable=True)
     description_management_department: so.Mapped[Optional[str]] = so.mapped_column(sa.Text, nullable=True)
     request_type: so.Mapped[RequestType] = so.mapped_column(
         sa.Enum(RequestType),
@@ -93,10 +92,6 @@ class Request(Base):
     update_at: so.Mapped[Optional[datetime]] = so.mapped_column(
         sa.DateTime(timezone=True),
         onupdate=sa.func.now(),
-        nullable=True
-    )
-    deadline: so.Mapped[Optional[datetime]] = so.mapped_column(
-        sa.DateTime(timezone=True),
         nullable=True
     )
     completed_at: so.Mapped[Optional[datetime]] = so.mapped_column(
@@ -164,14 +159,6 @@ class Request(Base):
     management_department: so.Mapped[Optional["ManagementDepartment"]] = so.relationship(
         "ManagementDepartment",
         back_populates="management_department_requests"
-    )
-    executor: so.Mapped[Optional["Executor"]] = so.relationship(
-        "Executor",
-        back_populates="executor_requests"
-    )
-    executor_organization: so.Mapped[Optional["ExecutorOrganization"]] = so.relationship(
-        "ExecutorOrganization",
-        back_populates="executor_organization_requests"
     )
     department: so.Mapped["Department"] = so.relationship(
     "Department",

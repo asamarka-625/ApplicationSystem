@@ -13,12 +13,6 @@ class ItemsRequest(BaseModel):
     quantity: Annotated[int, Field(ge=1)]
 
 
-# Схема названий предметов заявки
-class ItemsNameRequest(BaseModel):
-    name: Annotated[str, Field(strict=True, strip_whitespace=True)]
-    quantity: Annotated[int, Field(ge=1)]
-
-
 # Схема вложений заявки
 class AttachmentsRequest(BaseModel):
     file_name: Annotated[str, Field(strict=True, strip_whitespace=True)]
@@ -41,11 +35,11 @@ class RightsResponse(BaseModel):
     view: bool
     edit: bool
     approve: bool
-    reject: bool
-    redirect: bool
-    deadline: bool
-    planning: bool
-    ready: bool
+    reject_before: bool
+    reject_after: bool
+    redirect_management_department: bool
+    redirect_executor: bool
+    redirect_org: bool
 
 
 # Схема ответа информации о заявки
@@ -55,7 +49,6 @@ class RequestResponse(BaseModel):
     status: Dict[str, str]
     is_emergency: bool
     created_at: datetime
-    deadline: Optional[datetime]
     rights: RightsResponse
 
 
@@ -75,6 +68,17 @@ class RequestHistoryResponse(BaseModel):
     user: UserResponse
 
 
+# Схема названий предметов заявки
+class ItemsNameRequest(BaseModel):
+    id: Annotated[int, Field(ge=1)]
+    name: Annotated[str, Field(strict=True, strip_whitespace=True)]
+    quantity: Annotated[int, Field(ge=1)]
+    executor: Optional[UserResponse]
+    executor_organization: Optional[UserResponse]
+    description_executor: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
+    description_organization: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
+
+
 # Схема ответа подробной информации о заявки
 class RequestDetailResponse(BaseModel):
     registration_number: Annotated[str, Field(strict=True, strip_whitespace=True)]
@@ -82,25 +86,31 @@ class RequestDetailResponse(BaseModel):
     status: Dict[str, str]
     items: List[ItemsNameRequest]
     description: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
-    description_executor: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
+    description_management_department: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
     department_name: Annotated[str, Field(strict=True, strip_whitespace=True)]
     secretary: UserResponse
     judge: UserResponse
-    management: UserResponse
-    executor: UserResponse
+    management: Optional[UserResponse]
+    management_department: Optional[UserResponse]
     created_at: datetime
-    deadline: Optional[datetime]
     updated_at: Optional[datetime]
     completed_at: Optional[datetime]
     is_emergency: bool
     attachments: Optional[List[AttachmentsRequest]] = None
     history: List[RequestHistoryResponse]
+    rights: RightsResponse
 
 
-# Схема запроса на назначение исполнителя
+# Схема запроса на назначение пользователя
 class RedirectRequest(BaseModel):
     user_role_id: Annotated[int, Field(ge=1)]
     description: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
+
+
+# Схема запроса на назначение пользователя вместе с deadline
+class RedirectRequestWithDeadline(RedirectRequest):
+    item_id: Annotated[int, Field(ge=1)]
+    deadline: datetime
 
 
 # Схема запроса комментария

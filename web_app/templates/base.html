@@ -18,7 +18,7 @@
                 <i class="fas fa-balance-scale"></i>
                 <span>Система мировых судей</span>
             </div>
-            <div class="user-info">
+            <div class="user-info-panel">
                 <span id="userName">{{ full_name }}</span>
                 <div class="user-role" id="userRole">{{ role_value }}</div>
                 {% if role != '' %}
@@ -60,7 +60,7 @@
                     {% endif %}
                     {% if role == 'EXECUTOR' %}
                     <li class="nav-item">
-                        <a href="/requests" class="nav-link">
+                        <a href="/requests-executors" class="nav-link">
                             <i class="fas fa-list-alt"></i>
                             <span>Заявки на исполнения</span>
                         </a>
@@ -86,8 +86,15 @@
                         </a>
                     </li>
                     {% endif %}
-                    {% if role == 'MANAGEMENT' or role == 'EXECUTOR'%}
-                     <li class="nav-item">
+                    {% if role == 'MANAGEMENT_DEPARTMENT' %}
+                    <li class="nav-item">
+                        <a href="/requests" class="nav-link">
+                            <i class="fa-solid fa-box-archive"></i>
+                            <span>Заявки</span>
+                        </a>
+                    {% endif %}
+                    {% if role in ('MANAGEMENT', 'MANAGEMENT_DEPARTMENT', 'EXECUTOR', 'EXECUTOR_ORGANIZATION') %}
+                    <li class="nav-item">
                         <a href="/planning" class="nav-link">
                             <i class="fa-solid fa-box-archive"></i>
                             <span>Планирование</span>
@@ -139,6 +146,8 @@
     <script src="/static/js/redirect_executor.js"></script>
     {% elif page == "redirect_management" %}
     <script src="/static/js/redirect_management.js"></script>
+    {% elif page == "requests_executors" %}
+    <script src="/static/js/requests_executors.js"></script>
     {% endif %}
 </body>
 </html>

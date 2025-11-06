@@ -25,9 +25,9 @@
             <th>Описание</th>
             <td id="description"></td>
         </tr>
-        <tr id="for_executor" style="display: none;">
-            <th>Комментарий для исполнителя</th>
-            <td id="description_executor"></td>
+        <tr id="for_description_management" style="display: none;">
+            <th>Комментарий для сотрудника управления отдела</th>
+            <td id="description_management_department"></td>
         </tr>
         <tr>
             <th>Срочность</th>
@@ -56,9 +56,9 @@
             </td>
         </tr>
         <tr>
-            <th>Исполнитель</th>
+            <th>Сотрудник управления отдела</th>
             <td>
-                <button id="executor_name"></button>
+                <button id="management_department_name"></button>
             </td>
         </tr>
         <tr>
@@ -103,9 +103,7 @@
     <div class="modal-content">
         <span class="close">&times;</span>
         <h2>Информация о пользователе</h2>
-        <div id="userInfo" class="user-info">
-            <!-- Здесь будет отображаться информация о пользователе -->
-        </div>
+        <div id="userInfo" class="user-info"></div>
         <div class="modal-actions">
             <button type="button" class="btn btn-secondary" id="closeModal">Закрыть</button>
         </div>
@@ -127,6 +125,28 @@
             <div id="selectedExecutor" class="selected-executor" style="display: none;">
                 <strong>Выбран:</strong> <span id="selectedExecutorName"></span>
                 <input type="hidden" id="selectedExecutorId">
+            </div>
+
+            <div class="form-group">
+                <label for="executionComment">Комментарий к назначению:</label>
+                <textarea
+                    id="executionComment"
+                    class="form-control"
+                    rows="3"
+                    placeholder="Введите комментарий для исполнителя..."
+                ></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="executionDeadline">Срок исполнения (дней):</label>
+                <input
+                    type="number"
+                    id="executionDeadline"
+                    class="form-control"
+                    value="20"
+                    min="1"
+                    max="365"
+                >
             </div>
         </div>
         <div class="modal-actions">

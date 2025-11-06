@@ -400,10 +400,9 @@ class Executor(Base):
         "ManagementDepartment",
         back_populates="executors"
     )
-    executor_requests: so.Mapped[List["Request"]] = so.relationship(
-        "Request",
-        back_populates="executor",
-        foreign_keys="Request.executor_id"
+    executor_items: so.Mapped[List["RequestItem"]] = so.relationship(
+        "RequestItem",
+        back_populates="executor"
     )
 
     def __repr__(self):
@@ -438,10 +437,9 @@ class ExecutorOrganization(Base):
         back_populates="executor_organization_profile",
         lazy='joined'
     )
-    executor_organization_requests: so.Mapped[List["Request"]] = so.relationship(
-        "Request",
-        back_populates="executor_organization",
-        foreign_keys="Request.executor_organization_id"
+    executor_organization_items: so.Mapped[List["RequestItem"]] = so.relationship(
+        "RequestItem",
+        back_populates="executor_organization"
     )
 
     def __repr__(self):

@@ -6,7 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from fastapi import HTTPException, status
 # Внутренние модули
 from web_app.src.core import config
-from web_app.src.models import Executor, User
+from web_app.src.models import Executor, User, ManagementDepartment
 from web_app.src.core import connection
 
 
@@ -14,13 +14,13 @@ from web_app.src.core import connection
 @connection
 async def sql_get_executors(
         session: AsyncSession,
-        management_department_id: Optional[int] = None
+        management_department_profile: Optional[ManagementDepartment] = None
 ) -> List[Dict[str, Any]]:
     try:
         query = sa.select(Executor.id, Executor.position, User.full_name).join(Executor.user)
 
-        if management_department_id is not None:
-            query = query.where(Executor.management_department_id == management_department_id)
+        if management_department_profile is not None:
+            query = query.where(Executor.management_department_id == management_department_profile.id)
 
         names_result = await session.execute(query)
 

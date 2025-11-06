@@ -178,7 +178,7 @@ async function loadRequests() {
         const typeFilter = document.getElementById('typeFilter').value;
 
         // В реальном приложении - запрос к API с фильтрами
-        const response = await fetch(`${API_URL}/list/?status=${statusFilter}&request_type=${typeFilter}`);
+        const response = await fetch(`${API_URL}/list/?for_executor=true&status=${statusFilter}&request_type=${typeFilter}`);
         const data = await response.json();
 
         displayRequests(data);
@@ -204,6 +204,7 @@ function displayRequests(data) {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${request.registration_number}</td>
+            <td>${request.item.name} [${request.item.quantity}]</td>
             <td>${request.request_type.value}</td>
             <td>
                 <span class="status-badge status-${request.status.name.toLowerCase()}">
@@ -211,6 +212,7 @@ function displayRequests(data) {
                 </span>
             </td>
             <td>${request.is_emergency ? '<span class="emergency-badge">Аварийная</span>' : 'Обычная'}</td>
+            <td>${request.deadline ? formatDate(request.deadline) : 'Не задан'}</td>
             <td>${formatDate(request.created_at)}</td>
             <td>
                 <div style="display: flex; flex-direction: column; gap: 5px; width: max-content; text-align: center;">
@@ -480,5 +482,3 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
-
-

@@ -130,18 +130,17 @@ async def sql_get_user_by_id(
     try:
         query = sa.select(User).where(User.id == user_id)
 
+        role_to_relationship = {
+            UserRole.SECRETARY: User.secretary_profile,
+            UserRole.JUDGE: User.judge_profile,
+            UserRole.MANAGEMENT: User.management_profile,
+            UserRole.EXECUTOR: User.executor_profile,
+            UserRole.EXECUTOR_ORGANIZATION: User.executor_organization_profile,
+            UserRole.MANAGEMENT_DEPARTMENT: User.management_department_profile
+        }
+
         if role is not None:
-            if UserRole.SECRETARY in role:
-                query = query.options(so.joinedload(User.secretary_profile))
-
-            if UserRole.JUDGE in role:
-                query = query.options(so.joinedload(User.judge_profile))
-
-            if UserRole.MANAGEMENT in role:
-                query = query.options(so.joinedload(User.management_profile))
-
-            if UserRole.EXECUTOR in role:
-                query = query.options(so.joinedload(User.executor_profile))
+            query = query.options(*(so.joinedload(role_to_relationship[r]) for r in role))
 
         user_result = await session.execute(query)
         user = user_result.scalar_one()

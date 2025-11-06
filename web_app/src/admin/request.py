@@ -24,7 +24,6 @@ class RequestAdmin(ModelView, model=Request):
         Request.is_emergency: "Срочность",
         Request.created_at: "Дата создания",
         Request.update_at: "Дата обновления",
-        Request.deadline: "Срок выполнения",
         Request.completed_at: "Выполнено",
         Request.department: "Отделение",
         'items_formatted': "Запрошено"
@@ -44,7 +43,6 @@ class RequestAdmin(ModelView, model=Request):
         Request.status: lambda m, a: m.status.value.capitalize() if m.status else '',
         Request.created_at: lambda m, a: m.created_at.strftime("%d.%m.%Y %H:%M") if m.created_at else "Не создан",
         Request.update_at: lambda m, a: m.update_at.strftime("%d.%m.%Y %H:%M") if m.update_at else "Не обновлен",
-        Request.deadline: lambda m, a: m.deadline.strftime("%d.%m.%Y %H:%M") if m.deadline else "Не установлен",
         Request.completed_at: lambda m, a: m.completed_at.strftime("%d.%m.%Y %H:%M") \
             if m.completed_at else "Не выполнено",
         'items_formatted': lambda m, a: RequestAdmin._format_items_detail(m.items)
@@ -107,7 +105,6 @@ class RequestAdmin(ModelView, model=Request):
         Request.is_emergency,
         Request.created_at,
         Request.update_at,
-        Request.deadline,
         Request.completed_at,
         Request.department,
         'items_formatted'
@@ -121,7 +118,6 @@ class RequestAdmin(ModelView, model=Request):
         'request_type',
         'is_emergency',
         'assignee',
-        'deadline',
         'status'
     ]
 

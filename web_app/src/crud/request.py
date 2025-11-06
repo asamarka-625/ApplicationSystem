@@ -12,11 +12,12 @@ from web_app.src.core import config
 from web_app.src.models import (Request, TYPE_ID_MAPPING, request_item, RequestItem, RequestHistory,
                                 RequestType, RequestDocument, RequestAction, RequestStatus, TYPE_MAPPING,
                                 STATUS_MAPPING, User, Secretary, Judge, Management, Executor, Item, UserRole,
-                                ManagementDepartment)
+                                ManagementDepartment, ExecutorOrganization, RequestItemStatus)
 from web_app.src.core import connection
 from web_app.src.schemas import (CreateRequest, RequestResponse, RequestDetailResponse,
                                  RequestHistoryResponse, RequestDataResponse, RightsResponse,
-                                 RedirectRequest, UserResponse, AttachmentsRequest, ItemsNameRequest)
+                                 RedirectRequest, UserResponse, AttachmentsRequest, ItemsNameRequest,
+                                 RedirectRequestWithDeadline)
 
 
 # Создаем новую заявку
@@ -125,8 +126,8 @@ async def sql_get_requests_by_user(
                 Request.status != RequestStatus.REGISTERED
             )
 
-        elif user.is_executor:
-            query = query.where(Request.executor_id == user.executor_profile.id)
+        elif user.is_management_department:
+            query = query.where(Request.management_department_id == user.management_department_profile.id)
 
         else:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
@@ -153,20 +154,91 @@ async def sql_get_requests_by_user(
                 },
                 is_emergency=request.is_emergency,
                 created_at=request.created_at,
-                deadline=request.deadline,
                 rights=RightsResponse(
                     view=True,
                     edit=request.status == RequestStatus.REGISTERED,
                     approve=request.status == RequestStatus.REGISTERED,
-                    reject=request.status not in (RequestStatus.COMPLETED, RequestStatus.COMPLETED,
-                                                  RequestStatus.CANCELLED),
-                    redirect=request.status not in (RequestStatus.REGISTERED, RequestStatus.COMPLETED,
-                                                    RequestStatus.CANCELLED),
-                    deadline=request.status not in (RequestStatus.REGISTERED, RequestStatus.COMPLETED,
-                                                    RequestStatus.CANCELLED),
-                    planning=request.status not in (RequestStatus.REGISTERED, RequestStatus.COMPLETED,
-                                                    RequestStatus.CANCELLED),
-                    ready=request.status == RequestStatus.IN_PROGRESS
+                    reject_before=request.status == RequestStatus.REGISTERED,
+                    reject_after=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED),
+                    redirect_management_department=request.status not in (RequestStatus.COMPLETED,
+                                                                          RequestStatus.CANCELLED),
+                    redirect_executor=request.status not in (RequestStatus.COMPLETED,
+                                                             RequestStatus.CANCELLED),
+                    redirect_org=request.status not in (RequestStatus.COMPLETED,
+                                                        RequestStatus.CANCELLED),
+                )
+            )
+            for request in requests
+        ]
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error view requests: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error view requests: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
+
+
+# Выводим список заявок для исполнителя (организации)
+@connection
+async def sql_get_requests_for_executor(
+        session: AsyncSession,
+        user: User,
+        status_filter: str = "all",
+        type_filter: str = "all"
+) -> List[RequestExecutorResponse]:
+    try:
+        query = (
+            sa.select(Request).join(RequestItem, RequestItem.request_id == Request.id)
+        )
+
+        if user.is_executor:
+            query = query.where(RequestItem.executor_id == user.executor_profile.id)
+
+        elif user.is_executor_organization:
+            query = query.where(RequestItem.executor_organization_id == user.executor_profile.id)
+
+        else:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
+
+        if status_filter and status_filter != "all" and STATUS_MAPPING.get(status_filter):
+            query = query.where(Request.status == STATUS_MAPPING[status_filter])
+
+        if type_filter and type_filter != "all" and TYPE_MAPPING.get(type_filter):
+            query = query.where(Request.request_type == TYPE_MAPPING[type_filter])
+
+        requests_result = await session.execute(query)
+        requests = requests_result.scalars()
+
+        return [
+            RequestExecutorResponse(
+                registration_number=request.registration_number,
+                request_type={
+                    "name": request.name,
+                    "value": request.request_type.value
+                },
+                status={
+                    "name": request.status.name,
+                    "value": request.status.value
+                },
+                is_emergency=request.is_emergency,
+                created_at=request.created_at,
+                rights=RightsResponse(
+                    view=True,
+                    edit=request.status == RequestStatus.REGISTERED,
+                    approve=request.status == RequestStatus.REGISTERED,
+                    reject_before=request.status == RequestStatus.REGISTERED,
+                    reject_after=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED),
+                    redirect_management_department=request.status not in (RequestStatus.COMPLETED,
+                                                                          RequestStatus.CANCELLED),
+                    redirect_executor=request.status not in (RequestStatus.COMPLETED,
+                                                             RequestStatus.CANCELLED),
+                    redirect_org=request.status not in (RequestStatus.COMPLETED,
+                                                        RequestStatus.CANCELLED),
                 )
             )
             for request in requests
@@ -196,11 +268,16 @@ async def sql_get_request_details(
             sa.select(Request)
             .where(Request.registration_number == registration_number)
             .options(
-                so.selectinload(Request.item_associations).joinedload(RequestItem.item),
+                so.selectinload(Request.item_associations)
+                .joinedload(RequestItem.item),
+                so.selectinload(Request.item_associations)
+                .joinedload(RequestItem.executor).joinedload(Executor.user),
+                so.selectinload(Request.item_associations)
+                .joinedload(RequestItem.executor_organization).joinedload(ExecutorOrganization.user),
                 so.joinedload(Request.secretary).joinedload(Secretary.user),
                 so.joinedload(Request.judge).joinedload(Judge.user),
                 so.joinedload(Request.management).joinedload(Management.user),
-                so.joinedload(Request.executor).joinedload(Executor.user),
+                so.joinedload(Request.management_department).joinedload(ManagementDepartment.user),
                 so.joinedload(Request.department),
                 so.selectinload(Request.related_documents),
                 so.selectinload(Request.history).joinedload(RequestHistory.user)
@@ -221,14 +298,28 @@ async def sql_get_request_details(
             },
             items=[
                 ItemsNameRequest(
+                    id=association.item_id,
                     name=f"{association.item.name} {association.item.description}".strip(),
-                    quantity=association.count
+                    quantity=association.count,
+                    executor=UserResponse(
+                        id=association.executor.user.id,
+                        name=association.executor.user.full_name
+                    ) if association.executor else None,
+                    executor_organization=UserResponse(
+                        id=association.executor_organization.user.id,
+                        name=association.executor_organization.user.full_name
+                    ) if association.executor_organization else None,
+                    description_executor=association.description_executor if role in \
+                        (UserRole.MANAGEMENT, UserRole.MANAGEMENT_DEPARTMENT, UserRole.EXECUTOR) else None,
+                    description_organization=association.description_organization if role in \
+                        (UserRole.MANAGEMENT, UserRole.MANAGEMENT_DEPARTMENT,
+                         UserRole.EXECUTOR, UserRole.EXECUTOR_ORGANIZATION) else None,
                 )
                 for association in request.item_associations
             ],
             description=request.description,
-            description_executor=request.description_executor if \
-                role in (UserRole.MANAGEMENT, UserRole.EXECUTOR) else None,
+            description_management_department=request.description_management_department if \
+                role in (UserRole.MANAGEMENT, UserRole.MANAGEMENT_DEPARTMENT) else None,
             department_name=f"[{request.department.code}] {request.department.name} ({request.department.address})",
             secretary=UserResponse(
                 id=request.secretary.user.id,
@@ -239,15 +330,14 @@ async def sql_get_request_details(
                 name=request.judge.user.full_name
             ),
             management=UserResponse(
-                id=request.management.user.id if request.management else None,
-                name=request.management.user.full_name if request.management else None
-            ),
-            executor=UserResponse(
-                id=request.executor.user.id if request.executor else None,
-                name=request.executor.user.full_name if request.executor else None
-            ),
+                id=request.management.user.id,
+                name=request.management.user.full_name
+            ) if request.management else None,
+            management_department=UserResponse(
+                id=request.management_department.user.id,
+                name=request.management_department.user.full_name
+            ) if request.management_department else None,
             created_at=request.created_at,
-            deadline=request.deadline,
             updated_at=request.update_at,
             completed_at=request.completed_at,
             is_emergency=request.is_emergency,
@@ -274,7 +364,20 @@ async def sql_get_request_details(
                     )
                 )
                 for h in request.history
-            ]
+            ],
+            rights=RightsResponse(
+                view=True,
+                edit=request.status == RequestStatus.REGISTERED,
+                approve=request.status == RequestStatus.REGISTERED,
+                reject_before=request.status == RequestStatus.REGISTERED,
+                reject_after=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED),
+                redirect_management_department=request.status not in (RequestStatus.COMPLETED,
+                                                                      RequestStatus.CANCELLED),
+                redirect_executor=request.status not in (RequestStatus.COMPLETED,
+                                                         RequestStatus.CANCELLED),
+                redirect_org=request.status not in (RequestStatus.COMPLETED,
+                                                    RequestStatus.CANCELLED),
+            )
         )
 
     except NoResultFound:
@@ -586,9 +689,7 @@ async def sql_reject_request(
 async def sql_redirect_executor_request(
         registration_number: str,
         user_id: int,
-        management_id: int,
-        role: UserRole,
-        data: RedirectRequest,
+        data: RedirectRequestWithDeadline,
         session: AsyncSession
 ) -> None:
     try:
@@ -596,6 +697,9 @@ async def sql_redirect_executor_request(
             sa.select(Request)
             .where(
                 Request.registration_number == registration_number
+            )
+            .options(
+                so.selectinload(Request.item_associations)
             )
         )
 
@@ -611,28 +715,94 @@ async def sql_redirect_executor_request(
         if executor_user is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Executor not found")
 
-        if request.status in (RequestStatus.REGISTERED, RequestStatus.CANCELLED):
+        request_item = next((obj for obj in request.item_associations if obj.item_id == data.item_id), None)
+
+        if request_item is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+
+        if request_item.status in (RequestStatus.REGISTERED, RequestStatus.CANCELLED) or \
+            request_item.status in (RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
-        request.status = RequestStatus.IN_PROGRESS
-
-        if role == role.MANAGEMENT_DEPARTMENT:
-            request.management_department_id = management_id
-
-        elif role == role.MANAGEMENT:
-            request.management_id = management_id
-
-        else:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
-
-        request.executor_id = data.user_role_id
-        request.description_executor = data.description
+        request_item.executor_id = data.user_role_id
+        request_item.description_executor = data.description
+        request_item.deadline_executor = data.deadline
 
         new_history = RequestHistory(
-            action=RequestAction.IN_PROGRESS,
+            action=RequestAction.APPOINTED,
             request_id=request.id,
             user_id=user_id,
             description=f"Заявка отправлена на выполнение\nИсполнитель: {executor_user.full_name}"
+        )
+        session.add(new_history)
+
+        await session.commit()
+
+    except NoResultFound:
+        config.logger.info(f"Request not found by registration_number: {registration_number}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found")
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error redirect executor request: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error redirect executor request: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
+
+
+# Назначение исполнителя заявки
+@connection
+async def sql_redirect_organization_request(
+        registration_number: str,
+        user_id: int,
+        data: RedirectRequestWithDeadline,
+        session: AsyncSession
+) -> None:
+    try:
+        request_result = await session.execute(
+            sa.select(Request)
+            .where(
+                Request.registration_number == registration_number
+            )
+            .options(
+                so.selectinload(Request.item_associations)
+            )
+        )
+
+        request = request_result.scalar_one()
+
+        org_user_result = await session.execute(
+            sa.select(User)
+            .join(ExecutorOrganization, ExecutorOrganization.user_id == User.id)
+            .where(ExecutorOrganization.id == data.user_role_id)
+        )
+        org_user = org_user_result.scalar_one_or_none()
+
+        if org_user is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization executor not found")
+
+        request_item = next((obj for obj in request.item_associations if obj.item_id == data.item_id), None)
+
+        if request_item is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+
+        if request_item.status in (RequestStatus.REGISTERED, RequestStatus.CANCELLED) or \
+            request_item.status in (RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
+
+        request_item.executor_organization_id = data.user_role_id
+        request_item.description_organization = data.description
+        request_item.deadline_organization = data.deadline
+
+        new_history = RequestHistory(
+            action=RequestAction.APPOINTED,
+            request_id=request.id,
+            user_id=user_id,
+            description=f"Заявка отправлена на выполнение\nИсполнитель: {org_user.full_name}"
         )
         session.add(new_history)
 
@@ -715,55 +885,6 @@ async def sql_redirect_management_request(
 
     except Exception as e:
         config.logger.error(f"Unexpected error redirect management request: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
-
-
-# Назначение сроков заявки
-@connection
-async def sql_deadline_request(
-        registration_number: str,
-        user_id: int,
-        deadline: datetime,
-        session: AsyncSession
-) -> None:
-    try:
-        request_result = await session.execute(
-            sa.select(Request)
-            .where(
-                Request.registration_number == registration_number
-            )
-        )
-
-        request = request_result.scalar_one()
-
-        if request.status in (RequestStatus.REGISTERED, RequestStatus.CANCELLED):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
-
-        request.deadline = deadline
-
-        new_history = RequestHistory(
-            action=RequestAction.IN_PROGRESS,
-            request_id=request.id,
-            user_id=user_id,
-            description=f"Назначен срок выполнения: {deadline.strftime("%d. %m. %Y %H:%M")}"
-        )
-        session.add(new_history)
-
-        await session.commit()
-
-    except NoResultFound:
-        config.logger.info(f"Request not found by registration_number: {registration_number}")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found")
-
-    except SQLAlchemyError as e:
-        config.logger.error(f"Database error deadline request: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
-
-    except HTTPException:
-        raise
-
-    except Exception as e:
-        config.logger.error(f"Unexpected error deadline request: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
 
 

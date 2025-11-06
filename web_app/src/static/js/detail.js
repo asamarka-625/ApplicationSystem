@@ -24,54 +24,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const userModal = document.getElementById('userModal');
     const userInfo = document.getElementById('userInfo');
     const closeModal = document.getElementById('closeModal');
-    const closeBtn = document.querySelector('.close');
+    const closeBtn = document.querySelectorAll('.close');
 
     const modal = document.getElementById('executorModal');
     const cancelBtn = document.getElementById('cancelExecutor');
     const assignBtn = document.getElementById('assignExecutor');
-
-    // Закрытие модального окна
-    closeBtn.onclick = function() {
-        modal.style.display = 'none';
-    }
 
     cancelBtn.onclick = function() {
         modal.style.display = 'none';
     }
 
     // Назначение исполнителя
-    assignBtn.onclick = async function() {
-        const executorId = document.getElementById('selectedExecutorId').value;
-
-        if (!executorId) {
-            showNotification('Выберите исполнителя', 'error');
-            return;
-        }
-
-        try {
-            const response = await fetch(``, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    executor_id: executorId
-                })
-            });
-
-            if (response.ok) {
-                showNotification('Исполнитель успешно назначен', 'success');
-                modal.style.display = 'none';
-                // Можно обновить интерфейс или перезагрузить данные
-            } else {
-                throw new Error('Ошибка назначения исполнителя');
-            }
-
-        } catch (error) {
-            console.error('Ошибка:', error);
-            showNotification('Ошибка назначения исполнителя', 'error');
-        }
-    };
+    assignBtn.onclick = assignExecutor;
 
     // Закрытие при клике вне модального окна
     window.onclick = function(event) {
@@ -132,8 +96,17 @@ document.addEventListener('DOMContentLoaded', function() {
         userModal.style.display = 'none';
     }
 
+    function closeModel() {
+        modal.style.display = 'none';
+    }
+
     // Обработчики событий
-    closeBtn.addEventListener('click', closeUserModal);
+    closeBtn.forEach(btn => {
+        btn.addEventListener('click', () => {
+            closeUserModal();
+            closeModel();
+        });
+    });
     closeModal.addEventListener('click', closeUserModal);
 
     // Закрытие при клике вне модального окна
@@ -150,8 +123,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 showNotification('Заявка не найдена', 'error');
             }
 
-            const request = await response.json();
-            displayRequestDetails(request);
+            const data = await response.json();
+            displayRequestDetails(data);
 
         } catch (error) {
             console.error('Ошибка загрузки:', error);
@@ -159,25 +132,28 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function displayRequestDetails(request) {
+    function displayRequestDetails(data) {
+        const request = data.details;
+        const rights = data.rights;
+
         document.getElementById('requestDetails').style.display = 'block';
 
         // Заполняем данные
         document.getElementById('registrationNumber').textContent = request.registration_number;
         document.getElementById('regNumber').textContent = request.registration_number;
         document.getElementById('requestType').textContent = request.request_type.value;
-        displayItems(request.items);
+        displayItems(request.items, request.rights, rights);
 
         document.getElementById('description').textContent = request.description;
-        if (request.description_executor != null) {
-            document.getElementById('description_executor').textContent = request.description_executor;
-            document.getElementById('for_executor').style = '';
+        if (request.description_management_department != null) {
+            document.getElementById('description_management_department').textContent = request.description_management_department;
+            document.getElementById('for_description_management').style = '';
         }
         document.getElementById('department').textContent = request.department_name;
         document.getElementById('secretary_name').textContent = request.secretary.name;
         document.getElementById('judge_name').textContent = request.judge.name;
-        document.getElementById('management_name').textContent = request.management.name ? request.management.name : 'Не назанчен';
-        document.getElementById('executor_name').textContent = request.executor.name ? request.executor.name : 'Не назанчен';
+        document.getElementById('management_name').textContent = request.management ? request.management.name : 'Не назначен';
+        document.getElementById('management_department_name').textContent = request.management_department ? request.management_department.name : 'Не назанчен';
         document.getElementById('createdAt').textContent = formatDate(request.created_at);
         document.getElementById('deadline').textContent = request.deadline ? formatDate(request.deadline) : 'Не задан';
         document.getElementById('completedAt').textContent = request.completed_at ? formatDate(request.completed_at) : 'Не выполнена';
@@ -205,7 +181,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         const management_button = document.getElementById('management_name');
-        if (request.management.id) {
+        if (request.management) {
             management_button.classList.add('btn-info');
             management_button.addEventListener('click', () => {
                 openUserModal(request.management.id);
@@ -214,14 +190,14 @@ document.addEventListener('DOMContentLoaded', function() {
             management_button.classList.add('btn-not-info');
         }
 
-        const executor_button = document.getElementById('executor_name');
-        if (request.executor.id) {
-            executor_button.classList.add('btn-info');
-            executor_button.addEventListener('click', () => {
-                openUserModal(request.executor.id);
+        const management_department_button = document.getElementById('management_department_name');
+        if (request.management_department) {
+            management_department_button.classList.add('btn-info');
+            management_department_button.addEventListener('click', () => {
+                openUserModal(request.management_department.id);
             });
         } else {
-            executor_button.classList.add('btn-not-info');
+            management_department_button.classList.add('btn-not-info');
         }
 
         if (request.attachments) {
@@ -233,11 +209,11 @@ document.addEventListener('DOMContentLoaded', function() {
         displayRequestHistory(request.history);
     }
 
-    function displayItems(items) {
+    function displayItems(items, request_rights, rights) {
         const itemsContainer = document.getElementById('items');
 
         if (!items || items.length === 0) {
-            itemsContainer.innerHTML = 'Предметы не указаны';
+            itemsContainer.innerHTML = '<div class="no-items">Предметы не указаны</div>';
             return;
         }
 
@@ -245,30 +221,113 @@ document.addEventListener('DOMContentLoaded', function() {
         itemsList.className = 'items-list';
 
         items.forEach(item => {
-            const itemElement = document.createElement('div');
-            itemElement.className = 'item-with-action';
+            const itemCard = document.createElement('div');
+            itemCard.className = 'item-card';
 
-            const itemName = document.createElement('span');
+            // Header с названием и действиями
+            const itemHeader = document.createElement('div');
+            itemHeader.className = 'item-header';
+
+            const itemName = document.createElement('div');
             itemName.className = 'item-name';
-            itemName.textContent = `${item.name} [${item.quantity} шт.]`;
+            itemName.innerHTML = `
+                ${item.name}
+                <span class="badge quantity-badge">${item.quantity} шт.</span>
+            `;
 
-            const buttonsContainer = document.createElement('div');
-            buttonsContainer.className = 'item-buttons';
-            buttonsContainer.style.display = 'flex';
-            buttonsContainer.style.gap = '8px';
-            buttonsContainer.style.marginLeft = '10px';
+            const actionButtons = document.createElement('div');
+            actionButtons.className = 'action-buttons';
 
-            const assignButton = document.createElement('button');
-            assignButton.className = 'assign-executor-btn';
-            assignButton.innerHTML = '<i class="fas fa-user-plus"></i>';
-            assignButton.title = 'Назначить исполнителя';
-            assignButton.onclick = () => openExecutorModal(item.id, item.name);
+            if (rights.redirect_executor && request_rights.redirect_executor) {
+                const assignExecutorButton = document.createElement('button');
+                assignExecutorButton.className = 'action-btn assign-executor-btn';
+                assignExecutorButton.innerHTML = '<i class="fas fa-user-plus"></i>';
+                assignExecutorButton.title = 'Назначить исполнителя';
+                assignExecutorButton.onclick = () => openExecutorModal(item.id, `${item.name.substring(0, 15)}...`, true);
+                actionButtons.appendChild(assignExecutorButton);
+            }
 
-            buttonsContainer.appendChild(assignButton);
+            if (rights.redirect_org && request_rights.redirect_org) {
+                const assignOrgButton = document.createElement('button');
+                assignOrgButton.className = 'action-btn assign-org-btn';
+                assignOrgButton.innerHTML = '<i class="fa-solid fa-users"></i>';
+                assignOrgButton.title = 'Назначить организацию-исполнителя';
+                assignOrgButton.onclick = () => openExecutorModal(item.id, `${item.name.substring(0, 15)}...`, false);
+                actionButtons.appendChild(assignOrgButton);
+            }
 
-            itemElement.appendChild(itemName);
-            itemElement.appendChild(buttonsContainer);
-            itemsList.appendChild(itemElement);
+            itemHeader.appendChild(itemName);
+
+            // Детали с исполнителями
+            const itemDetails = document.createElement('div');
+            itemDetails.className = 'item-details';
+
+            const executorsSection = document.createElement('div');
+            executorsSection.className = 'executors-section';
+
+            // Исполнитель
+            const executorInfo = document.createElement('div');
+            executorInfo.className = 'executor-info';
+
+            const executorBtn = document.createElement('button');
+            executorBtn.className = `executor-btn ${item.executor ? 'assigned' : 'not-assigned'}`;
+            executorBtn.innerHTML = `
+                <i class="fas fa-user ${item.executor ? 'text-primary' : 'text-muted'}"></i>
+                ${item.executor ? item.executor.name : 'Исполнитель не назначен'}
+            `;
+
+            if (item.executor) {
+                executorBtn.addEventListener('click', () => openUserModal(item.executor.id));
+            }
+            executorInfo.appendChild(executorBtn);
+
+            // Организация-исполнитель
+            const orgInfo = document.createElement('div');
+            orgInfo.className = 'executor-info organization';
+
+            const orgBtn = document.createElement('button');
+            orgBtn.className = `executor-btn ${item.executor_organization ? 'assigned' : 'not-assigned'}`;
+            orgBtn.innerHTML = `
+                <i class="fa-solid fa-building ${item.executor_organization ? 'text-success' : 'text-muted'}"></i>
+                ${item.executor_organization ? item.executor_organization.name : 'Организация не назначена'}
+            `;
+
+            if (item.executor_organization) {
+                orgBtn.addEventListener('click', () => openUserModal(item.executor_organization.id));
+            }
+            orgInfo.appendChild(orgBtn);
+
+            executorsSection.appendChild(executorInfo);
+            executorsSection.appendChild(orgInfo);
+            itemDetails.appendChild(executorsSection);
+            itemDetails.appendChild(actionButtons.cloneNode(true));
+
+            // Комментарии
+            const descriptionsSection = document.createElement('div');
+            descriptionsSection.className = 'descriptions-section';
+
+            if (item.description_executor) {
+                const description = document.createElement('div');
+                description.className = 'description';
+                description.innerHTML = `<strong>Комментарий исполнителя:</strong> ${item.description_executor}`;
+                descriptionsSection.appendChild(description);
+            }
+
+            if (item.description_organization) {
+                const description = document.createElement('div');
+                description.className = 'description';
+                description.innerHTML = `<strong>Комментарий организации:</strong> ${item.description_organization}`;
+                descriptionsSection.appendChild(description);
+            }
+
+            // Сборка карточки
+            itemCard.appendChild(itemHeader);
+            itemCard.appendChild(itemDetails);
+            if (descriptionsSection.children.length > 0) {
+                itemCard.appendChild(descriptionsSection);
+            }
+
+            itemsList.appendChild(itemCard);
         });
 
         itemsContainer.innerHTML = '';
@@ -366,19 +425,29 @@ document.addEventListener('DOMContentLoaded', function() {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
-    function openExecutorModal(itemId, itemName) {
-        currentItemId = itemId;
+    function openExecutorModal(itemId, itemName, executor = true) {
+        const modalName = document.querySelector('#executorModal h2');
 
-        // Обновляем заголовок модального окна
-        document.querySelector('#executorModal h2').textContent = `Назначить исполнителя для: ${itemName}`;
+        if (executor) {
+            modalName.textContent = `Назначить исполнителя для: ${itemName}`;
+        } else {
+            modalName.textContent = `Назначить организацию-исполнителя для: ${itemName}`;
+        }
+
+        modalName.dataset.itemId = itemId;
+        modalName.dataset.executor = executor;
 
         // Сбрасываем форму
         document.getElementById('selectedExecutor').style.display = 'none';
         document.getElementById('selectedExecutorId').value = '';
         document.getElementById('selectedExecutorName').textContent = '';
 
+        // Сбрасываем дополнительные поля
+        document.getElementById('executionComment').value = '';
+        document.getElementById('executionDeadline').value = '20';
+
         // Загружаем исполнителей
-        loadExecutors();
+        loadExecutors(executor);
 
         // Показываем модальное окно
         document.getElementById('executorModal').style.display = 'block';
@@ -401,7 +470,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const suggestionsHTML = executors.map(executor => `
                 <div class="executor-suggestion-item" data-executor-id="${executor.id}">
                     <strong>${executor.full_name}</strong>
-                    ${executor.position ? `<br><small>${executor.position}</small>` : ''}
+                    ${executor.position ? `<br><small>${executor.position}</small>` : `<br><small>${executor.name}</small>`}
                 </div>
             `).join('');
 
@@ -431,9 +500,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    async function loadExecutors() {
+    async function loadExecutors(executor) {
         try {
-            const response = await fetch(`${API_BASE_URL}/request/create/executors`);
+            let response;
+            if (executor) {
+                response = await fetch(`${API_BASE_URL}/request/create/executors`);
+            } else {
+                response = await fetch(`${API_BASE_URL}/request/create/organizations`);
+            }
+
             allExecutors = await response.json();
 
             // Инициализируем выбор исполнителей
@@ -443,6 +518,66 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Ошибка загрузки исполнителей:', error);
             showNotification('Ошибка загрузки списка исполнителей', 'error');
         }
+    }
+
+    function assignExecutor() {
+        const executorId = document.getElementById('selectedExecutorId').value;
+        const modalName = document.querySelector('#executorModal h2');
+        const itemId = modalName.dataset.itemId;
+        const executor_flag = Number(modalName.dataset.executor);
+        const comment = document.getElementById('executionComment').value;
+        const deadlineDays = document.getElementById('executionDeadline').value;
+
+        if (!executorId) {
+            showNotification('Пожалуйста, выберите исполнителя', 'error');
+            return;
+        }
+
+        if (!deadlineDays || deadlineDays < 1) {
+            showNotification('Пожалуйста, укажите корректный срок исполнения', 'error');
+            return;
+        }
+
+        // Рассчитываем дату исполнения
+        const executionDate = new Date();
+        executionDate.setDate(executionDate.getDate() + parseInt(deadlineDays));
+
+        const assignmentData = {
+            item_id: itemId,
+            user_role_id: executorId,
+            description: comment,
+            deadline: executionDate.toISOString().split('T')[0],
+        };
+
+        const registrationNumber = getRegistrationNumberFromUrl();
+        let url;
+        if (executor_flag === 1) {
+            url = `${API_BASE_URL}/request/redirect/executor/${registrationNumber}`;
+        } else {
+            url = `${API_BASE_URL}/request/redirect/organization/${registrationNumber}`;
+        }
+
+        // Отправка данных на сервер
+        fetch(url, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(assignmentData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status == 'success') {
+                showNotification('Исполнитель успешно назначен', 'success');
+                window.location.reload();
+            } else {
+                showNotification('Ошибка при назначении исполнителя: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+            showNotification('Ошибка при назначении исполнителя', 'error');
+        });
     }
 });
 

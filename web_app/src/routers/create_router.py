@@ -54,26 +54,6 @@ async def search_items(
 
 
 @router.get(
-    path="/executors",
-    response_class=JSONResponse,
-    summary="Вывод исполнителей"
-)
-async def get_executors(
-        management_department_id: Optional[Annotated[
-            int,
-            Field(ge=1)
-        ]] = None,
-        current_user: User = Depends(get_current_user)
-):
-    if not current_user.is_management:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
-
-    executors = await sql_get_executors(management_department_id=management_department_id)
-
-    return executors
-
-
-@router.get(
     path="/managements",
     response_class=JSONResponse,
     summary="Вывод сотрудников управления отдела"
@@ -90,6 +70,26 @@ async def get_management_departments(
 
 
 @router.get(
+    path="/executors",
+    response_class=JSONResponse,
+    summary="Вывод исполнителей"
+)
+async def get_executors(
+        current_user: User = Depends(
+            get_current_user_with_role((UserRole.MANAGEMENT_DEPARTMENT,))
+        )
+):
+    if not (current_user.is_management or current_user.is_management_department):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
+
+    executors = await sql_get_executors(
+        management_department_profile=current_user.management_department_profile
+    )
+
+    return executors
+
+
+@router.get(
     path="/organizations",
     response_class=JSONResponse,
     summary="Вывод организаций-исполнителей"
@@ -97,7 +97,8 @@ async def get_management_departments(
 async def get_organizations(
         current_user: User = Depends(get_current_user)
 ):
-    if not current_user.is_management:
+    if not (current_user.is_management or current_user.is_management_department or
+            current_user.executor_organization_profile):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
     organizations = await sql_get_executor_organizations()

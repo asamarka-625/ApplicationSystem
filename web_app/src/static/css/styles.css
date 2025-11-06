@@ -50,7 +50,7 @@ body {
     font-weight: bold;
 }
 
-.user-info {
+.user-info-panel {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -317,6 +317,7 @@ body {
 .status-in_progress { background: #fff3cd; color: #856404; }
 .status-completed { background: #d1ecf1; color: #0c5460; }
 .status-cancelled { background: #f8d7da; color: #721c24; }
+.status-appointed { background: #fff3cd; color: #856404; }
 
 /* Модальное окно */
 .modal {

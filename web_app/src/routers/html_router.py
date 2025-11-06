@@ -47,6 +47,24 @@ async def requests_page(
     return templates.TemplateResponse('requests.html', context=context)
 
 
+# Страница просмотра списков заявок исполнителей
+@router.get("/requests-executors", response_class=HTMLResponse)
+async def requests_page(
+        request: Request,
+        current_user: User = Depends(get_current_user)
+):
+    context = {
+        "request": request,
+        "page": "requests_executors",
+        "title": "Заявки на исполнения",
+        "full_name": current_user.full_name,
+        "role": current_user.role.name,
+        "role_value": current_user.role.value.capitalize()
+    }
+
+    return templates.TemplateResponse('requests_executors.html', context=context)
+
+
 # Страница детального просмотра заявки
 @router.get("/request/{registration_number}", response_class=HTMLResponse)
 async def detail_page(

@@ -6,10 +6,11 @@ from fastapi.responses import JSONResponse
 # Внутренние модули
 from web_app.src.models import User, UserRole
 from web_app.src.dependencies import get_current_user, get_current_user_with_role
-from web_app.src.schemas import CreateRequest, RedirectRequest, CommentRequest, ScheduleRequest
+from web_app.src.schemas import (CreateRequest, RedirectRequest, CommentRequest,
+                                 RedirectRequestWithDeadline)
 from web_app.src.crud import (sql_edit_request, sql_approve_request, sql_reject_request,
-                              sql_redirect_executor_request, sql_deadline_request, sql_execute_request,
-                              sql_redirect_management_request)
+                              sql_redirect_executor_request, sql_execute_request,
+                              sql_redirect_management_request, sql_redirect_organization_request)
 
 
 router = APIRouter(
@@ -131,10 +132,8 @@ async def redirect_management_request(
 )
 async def redirect_executor_request(
         registration_number: Annotated[str, Field(strict=True)],
-        data: RedirectRequest,
-        current_user: User = Depends(
-            get_current_user_with_role((UserRole.MANAGEMENT,))
-        )
+        data: RedirectRequestWithDeadline,
+        current_user: User = Depends(get_current_user)
 ):
     if not (current_user.is_management_department or current_user.is_management):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
@@ -142,8 +141,6 @@ async def redirect_executor_request(
     await sql_redirect_executor_request(
         registration_number=registration_number,
         user_id=current_user.id,
-        role=current_user.role,
-        management_id=current_user.management_profile.id,
         data=data
     )
 
@@ -151,22 +148,22 @@ async def redirect_executor_request(
 
 
 @router.patch(
-    path="/deadline/{registration_number}",
+    path="/redirect/organization/{registration_number}",
     response_class=JSONResponse,
-    summary="Назначить сроки"
+    summary="Назначить организацию-исполнителя"
 )
-async def deadline_request(
+async def redirect_organization_request(
         registration_number: Annotated[str, Field(strict=True)],
-        data: ScheduleRequest,
+        data: RedirectRequestWithDeadline,
         current_user: User = Depends(get_current_user)
 ):
-    if not current_user.is_management:
+    if not (current_user.is_management_department or current_user.is_management or current_user.is_executor):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
-    await sql_deadline_request(
+    await sql_redirect_organization_request(
         registration_number=registration_number,
         user_id=current_user.id,
-        deadline=data.scheduled_datetime
+        data=data
     )
 
     return {"status": "success"}
