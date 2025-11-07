@@ -11,12 +11,17 @@ function showNotification(message, type = 'success') {
     }, 5000);
 }
 
-function formatDate(dateString) {
+function formatDate(dateString, full=true) {
     const date = new Date(dateString);
-    return date.toLocaleDateString('ru-RU') + ' ' + date.toLocaleTimeString('ru-RU', {
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+
+    if (full) {
+        return date.toLocaleDateString('ru-RU') + ' ' + date.toLocaleTimeString('ru-RU', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } else {
+        return date.toLocaleDateString('ru-RU');
+    }
 }
 
 async function logout() {

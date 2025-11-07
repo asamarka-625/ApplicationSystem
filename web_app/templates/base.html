@@ -58,9 +58,9 @@
                         </a>
                     </li>
                     {% endif %}
-                    {% if role == 'EXECUTOR' %}
+                    {% if role in ('EXECUTOR', 'EXECUTOR_ORGANIZATION') %}
                     <li class="nav-item">
-                        <a href="/requests-executors" class="nav-link">
+                        <a href="/requests" class="nav-link">
                             <i class="fas fa-list-alt"></i>
                             <span>Заявки на исполнения</span>
                         </a>
@@ -148,6 +148,8 @@
     <script src="/static/js/redirect_management.js"></script>
     {% elif page == "requests_executors" %}
     <script src="/static/js/requests_executors.js"></script>
+    {% elif page == "planning" %}
+    <script src="/static/js/planning.js"></script>
     {% endif %}
 </body>
 </html>

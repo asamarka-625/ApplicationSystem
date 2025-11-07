@@ -24,8 +24,6 @@
                     <th>№ заявки</th>
                     <th>Предмет</th>
                     <th>Тип</th>
-                    <th>Статус</th>
-                    <th>Срочность</th>
                     <th>Срок выполнения</th>
                     <th>Дата создания</th>
                     <th>Действия</th>
@@ -35,26 +33,4 @@
         </table>
     </div>
 </section>
-<div id="planningModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Добавление в планирование</h3>
-            <span class="close">&times;</span>
-        </div>
-        <div class="modal-body">
-            <div class="item-info">
-                <p><strong>Предмет:</strong> <span id="modalItemName"></span></p>
-                <p><strong>Количество:</strong> <span id="modalItemQuantity"></span> шт.</p>
-            </div>
-            <div class="date-picker">
-                <label for="deadlineDate"><strong>Срок выполнения:</strong></label>
-                <input type="date" id="deadlineDate" class="form-control">
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button id="addToPlanningBtn" class="btn btn-primary">Добавить в планирование</button>
-            <button id="cancelPlanningBtn" class="btn btn-secondary">Отмена</button>
-        </div>
-    </div>
-</div>
 {% endblock %}

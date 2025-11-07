@@ -7,9 +7,13 @@ from web_app.src.models import TYPE_MAPPING
 from web_app.src.schemas.user import UserResponse
 
 
-# Схема предметов заявки
-class ItemsRequest(BaseModel):
+# Схема ID предмета заявки
+class ItemsIdRequest(BaseModel):
     id: Annotated[int, Field(ge=1)]
+
+
+# Схема предмета заявки
+class ItemsRequest(ItemsIdRequest):
     quantity: Annotated[int, Field(ge=1)]
 
 
@@ -40,6 +44,11 @@ class RightsResponse(BaseModel):
     redirect_management_department: bool
     redirect_executor: bool
     redirect_org: bool
+    deadline: bool
+    planning: bool
+    ready: bool
+    confirm_management_department: bool
+    confirm_management: bool
 
 
 # Схема ответа информации о заявки
@@ -68,15 +77,22 @@ class RequestHistoryResponse(BaseModel):
     user: UserResponse
 
 
-# Схема названий предметов заявки
+# Схема названия предмета заявки
 class ItemsNameRequest(BaseModel):
     id: Annotated[int, Field(ge=1)]
     name: Annotated[str, Field(strict=True, strip_whitespace=True)]
     quantity: Annotated[int, Field(ge=1)]
+
+
+# Схема полной информации предмета заявки
+class ItemsNameRequestFull(ItemsNameRequest):
     executor: Optional[UserResponse]
     executor_organization: Optional[UserResponse]
     description_executor: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
     description_organization: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
+    deadline_executor: Optional[datetime]
+    deadline_organization: Optional[datetime]
+    access: bool
 
 
 # Схема ответа подробной информации о заявки
@@ -84,7 +100,7 @@ class RequestDetailResponse(BaseModel):
     registration_number: Annotated[str, Field(strict=True, strip_whitespace=True)]
     request_type: Dict[str, str]
     status: Dict[str, str]
-    items: List[ItemsNameRequest]
+    items: List[ItemsNameRequestFull]
     description: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
     description_management_department: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
     department_name: Annotated[str, Field(strict=True, strip_whitespace=True)]
@@ -121,3 +137,21 @@ class CommentRequest(BaseModel):
 # Схема запроса даты и времени
 class ScheduleRequest(BaseModel):
     scheduled_datetime: datetime
+
+
+# Схема заявки для исполнителя
+class RequestExecutorResponse(BaseModel):
+    registration_number: Annotated[str, Field(strict=True, strip_whitespace=True)]
+    request_type: Dict[str, str]
+    status: Dict[str, str]
+    item: ItemsNameRequest
+    is_emergency: bool
+    created_at: datetime
+    deadline: Optional[datetime]
+    rights: RightsResponse
+
+
+# Схема планирования предмета
+class PlanningRequest(BaseModel):
+    item_id: Annotated[int, Field(ge=1)]
+    deadline: datetime

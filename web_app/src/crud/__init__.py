@@ -9,7 +9,8 @@ from web_app.src.crud.request import (sql_create_request, sql_get_requests_by_us
                                       sql_get_request_data, sql_edit_request, sql_approve_request,
                                       sql_reject_request, sql_redirect_executor_request,
                                       sql_execute_request, sql_redirect_management_request,
-                                      sql_redirect_organization_request)
+                                      sql_redirect_organization_request, sql_get_requests_for_executor,
+                                      sql_get_planning_requests, sql_planning_request)
 from web_app.src.crud.judge import sql_get_department_id_by_judge_id
 from web_app.src.crud.executor import sql_get_executors
 from web_app.src.crud.management_department import sql_get_management_departments

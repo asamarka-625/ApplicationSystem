@@ -155,7 +155,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('management_name').textContent = request.management ? request.management.name : 'Не назначен';
         document.getElementById('management_department_name').textContent = request.management_department ? request.management_department.name : 'Не назанчен';
         document.getElementById('createdAt').textContent = formatDate(request.created_at);
-        document.getElementById('deadline').textContent = request.deadline ? formatDate(request.deadline) : 'Не задан';
         document.getElementById('completedAt').textContent = request.completed_at ? formatDate(request.completed_at) : 'Не выполнена';
         document.getElementById('updatedAt').textContent = request.updated_at ? formatDate(request.updated_at) : 'Не обновлялась';
 
@@ -238,7 +237,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const actionButtons = document.createElement('div');
             actionButtons.className = 'action-buttons';
 
-            if (rights.redirect_executor && request_rights.redirect_executor) {
+            if (item.access && rights.redirect_executor && request_rights.redirect_executor) {
                 const assignExecutorButton = document.createElement('button');
                 assignExecutorButton.className = 'action-btn assign-executor-btn';
                 assignExecutorButton.innerHTML = '<i class="fas fa-user-plus"></i>';
@@ -247,7 +246,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 actionButtons.appendChild(assignExecutorButton);
             }
 
-            if (rights.redirect_org && request_rights.redirect_org) {
+            if (item.access && rights.redirect_org && request_rights.redirect_org) {
                 const assignOrgButton = document.createElement('button');
                 assignOrgButton.className = 'action-btn assign-org-btn';
                 assignOrgButton.innerHTML = '<i class="fa-solid fa-users"></i>';
@@ -300,23 +299,37 @@ document.addEventListener('DOMContentLoaded', function() {
             executorsSection.appendChild(executorInfo);
             executorsSection.appendChild(orgInfo);
             itemDetails.appendChild(executorsSection);
-            itemDetails.appendChild(actionButtons.cloneNode(true));
+            itemDetails.appendChild(actionButtons);
 
             // Комментарии
             const descriptionsSection = document.createElement('div');
             descriptionsSection.className = 'descriptions-section';
 
+            const deadline_executor = document.createElement('div');
+            deadline_executor.innerHTML = `
+                <strong>(Исполнитель) Срок выполнения:</strong>
+                ${item.deadline_executor ? formatDate(item.deadline_executor, full=false) : 'не назначен'}
+            `;
+            descriptionsSection.appendChild(deadline_executor);
+
             if (item.description_executor) {
                 const description = document.createElement('div');
                 description.className = 'description';
-                description.innerHTML = `<strong>Комментарий исполнителя:</strong> ${item.description_executor}`;
+                description.innerHTML = `<strong>Комментарий к исполнителю:</strong> ${item.description_executor}`;
                 descriptionsSection.appendChild(description);
             }
+
+            const deadline_organization = document.createElement('div');
+            deadline_organization.innerHTML = `
+                <strong>(Организация) Срок выполнения:</strong>
+                ${item.deadline_organization ? formatDate(item.deadline_organization, full=false) : 'не назначен'}
+            `;
+            descriptionsSection.appendChild(deadline_organization);
 
             if (item.description_organization) {
                 const description = document.createElement('div');
                 description.className = 'description';
-                description.innerHTML = `<strong>Комментарий организации:</strong> ${item.description_organization}`;
+                description.innerHTML = `<strong>Комментарий к организации:</strong> ${item.description_organization}`;
                 descriptionsSection.appendChild(description);
             }
 
@@ -524,7 +537,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const executorId = document.getElementById('selectedExecutorId').value;
         const modalName = document.querySelector('#executorModal h2');
         const itemId = modalName.dataset.itemId;
-        const executor_flag = Number(modalName.dataset.executor);
+        const executor_flag = modalName.dataset.executor === 'true';
         const comment = document.getElementById('executionComment').value;
         const deadlineDays = document.getElementById('executionDeadline').value;
 
@@ -551,7 +564,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const registrationNumber = getRegistrationNumberFromUrl();
         let url;
-        if (executor_flag === 1) {
+        if (executor_flag) {
             url = `${API_BASE_URL}/request/redirect/executor/${registrationNumber}`;
         } else {
             url = `${API_BASE_URL}/request/redirect/organization/${registrationNumber}`;

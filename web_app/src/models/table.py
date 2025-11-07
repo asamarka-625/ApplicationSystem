@@ -39,6 +39,7 @@ request_item = sa.Table(
     ),
     sa.Column("deadline_executor", sa.DateTime(timezone=True), nullable=True),
     sa.Column("deadline_organization", sa.DateTime(timezone=True), nullable=True),
+    sa.Column("deadline_planning", sa.DateTime(timezone=True), nullable=True),
     sa.Column("description_executor", sa.Text, nullable=True),
     sa.Column("description_organization", sa.Text, nullable=True)
 )

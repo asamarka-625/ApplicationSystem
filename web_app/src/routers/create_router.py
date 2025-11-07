@@ -98,7 +98,7 @@ async def get_organizations(
         current_user: User = Depends(get_current_user)
 ):
     if not (current_user.is_management or current_user.is_management_department or
-            current_user.executor_organization_profile):
+            current_user.is_executor):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
     organizations = await sql_get_executor_organizations()

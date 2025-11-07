@@ -1,6 +1,5 @@
 # Внешние зависимости
-from typing import List
-from datetime import datetime
+from typing import List, Optional
 import uuid
 import sqlalchemy as sa
 import sqlalchemy.orm as so
@@ -17,7 +16,26 @@ from web_app.src.core import connection
 from web_app.src.schemas import (CreateRequest, RequestResponse, RequestDetailResponse,
                                  RequestHistoryResponse, RequestDataResponse, RightsResponse,
                                  RedirectRequest, UserResponse, AttachmentsRequest, ItemsNameRequest,
-                                 RedirectRequestWithDeadline)
+                                 ItemsNameRequestFull, RedirectRequestWithDeadline, RequestExecutorResponse,
+                                 PlanningRequest)
+
+
+# Вспомогательная функция для поучения прав для взаимодействия с предметом
+def get_right_for_item_by_role(
+    executor_id: Optional[int],
+    organization_id: Optional[int],
+    user: User
+) -> bool:
+    if user.role in (UserRole.MANAGEMENT, UserRole.MANAGEMENT_DEPARTMENT):
+        return True
+
+    if user.role == UserRole.EXECUTOR:
+        return bool(executor_id) and executor_id == user.executor_profile.id
+
+    if user.role == UserRole.EXECUTOR_ORGANIZATION:
+        return bool(organization_id) and organization_id == user.executor_organization_profile.id
+
+    return False
 
 
 # Создаем новую заявку
@@ -166,6 +184,12 @@ async def sql_get_requests_by_user(
                                                              RequestStatus.CANCELLED),
                     redirect_org=request.status not in (RequestStatus.COMPLETED,
                                                         RequestStatus.CANCELLED),
+                    deadline=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED),
+                    planning=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED),
+                    ready=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED),
+                    confirm_management_department=request.status not in (RequestStatus.COMPLETED,
+                                                                         RequestStatus.CANCELLED),
+                    confirm_management=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED)
                 )
             )
             for request in requests
@@ -193,66 +217,229 @@ async def sql_get_requests_for_executor(
 ) -> List[RequestExecutorResponse]:
     try:
         query = (
-            sa.select(Request).join(RequestItem, RequestItem.request_id == Request.id)
+            sa.select(Request)
+            .options(
+                so.selectinload(Request.item_associations).joinedload(RequestItem.item)
+            )
         )
 
+        conditions = []
+
         if user.is_executor:
-            query = query.where(RequestItem.executor_id == user.executor_profile.id)
+            conditions.append(
+                Request.id.in_(
+                    sa.select(RequestItem.request_id).where(
+                        RequestItem.executor_id == user.executor_profile.id,
+                        RequestItem.status != RequestItemStatus.PLANNED
+                    )
+                )
+            )
+            validate_association = lambda a, u: a.executor_id == u.executor_profile.id
 
         elif user.is_executor_organization:
-            query = query.where(RequestItem.executor_organization_id == user.executor_profile.id)
+            conditions.append(
+                Request.id.in_(
+                    sa.select(RequestItem.request_id).where(
+                        RequestItem.executor_organization_id == user.executor_organization_profile.id,
+                        RequestItem.status != RequestItemStatus.PLANNED
+                    )
+                )
+            )
+            validate_association = lambda a, u: a.executor_organization_id == u.executor_organization_profile.id
 
         else:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
         if status_filter and status_filter != "all" and STATUS_MAPPING.get(status_filter):
-            query = query.where(Request.status == STATUS_MAPPING[status_filter])
+            conditions.append(Request.status == STATUS_MAPPING[status_filter])
 
         if type_filter and type_filter != "all" and TYPE_MAPPING.get(type_filter):
-            query = query.where(Request.request_type == TYPE_MAPPING[type_filter])
+            conditions.append(Request.request_type == TYPE_MAPPING[type_filter])
+
+        query = query.where(sa.and_(*conditions))
 
         requests_result = await session.execute(query)
-        requests = requests_result.scalars()
+        requests = requests_result.scalars().all()
 
         return [
             RequestExecutorResponse(
                 registration_number=request.registration_number,
+                item=ItemsNameRequest(
+                    id=association.item.id,
+                    name=association.item.name,
+                    quantity=association.count,
+                ),
                 request_type={
-                    "name": request.name,
+                    "name": request.request_type.name,
                     "value": request.request_type.value
                 },
                 status={
-                    "name": request.status.name,
-                    "value": request.status.value
+                    "name": association.status.name,
+                    "value": association.status.value
                 },
                 is_emergency=request.is_emergency,
                 created_at=request.created_at,
+                deadline=association.deadline_executor if user.is_executor else association.deadline_organization,
                 rights=RightsResponse(
                     view=True,
-                    edit=request.status == RequestStatus.REGISTERED,
-                    approve=request.status == RequestStatus.REGISTERED,
-                    reject_before=request.status == RequestStatus.REGISTERED,
-                    reject_after=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED),
-                    redirect_management_department=request.status not in (RequestStatus.COMPLETED,
-                                                                          RequestStatus.CANCELLED),
-                    redirect_executor=request.status not in (RequestStatus.COMPLETED,
-                                                             RequestStatus.CANCELLED),
-                    redirect_org=request.status not in (RequestStatus.COMPLETED,
-                                                        RequestStatus.CANCELLED),
+                    edit=False,
+                    approve=False,
+                    reject_before=False,
+                    reject_after=False,
+                    redirect_management_department=False,
+                    redirect_executor=False,
+                    redirect_org=association.status not in (RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED),
+                    deadline=association.status not in (RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED),
+                    planning=association.status not in (RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED,
+                                                        RequestItemStatus.PLANNED),
+                    ready=association.status not in (RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED),
+                    confirm_management_department=False,
+                    confirm_management=False
                 )
             )
             for request in requests
+            for association in request.item_associations
+            if validate_association(association, user) and association.status != RequestItemStatus.PLANNED
         ]
 
     except SQLAlchemyError as e:
-        config.logger.error(f"Database error view requests: {e}")
+        config.logger.error(f"Database error view requests for executor: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
     except HTTPException:
         raise
 
     except Exception as e:
-        config.logger.error(f"Unexpected error view requests: {e}")
+        config.logger.error(f"Unexpected error view requests for executor: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
+
+
+# Выводим список запланированных заявок для пользователя
+@connection
+async def sql_get_planning_requests(
+        session: AsyncSession,
+        user: User,
+        status_filter: str = "all",
+        type_filter: str = "all"
+) -> List[RequestExecutorResponse]:
+    try:
+        query = (
+            sa.select(Request)
+            .options(
+                so.selectinload(Request.item_associations).joinedload(RequestItem.item)
+            )
+        )
+
+        conditions = []
+
+        if user.is_management:
+            conditions.append(Request.management_id == user.management_profile.id)
+            conditions.append(
+                Request.id.in_(
+                    sa.select(RequestItem.request_id).where(
+                        RequestItem.status == RequestItemStatus.PLANNED
+                    )
+                )
+            )
+            validate_association = lambda a, u: True
+
+        elif user.is_management_department:
+            conditions.append(Request.management_department_id == user.management_department_profile.id)
+            conditions.append(
+                Request.id.in_(
+                    sa.select(RequestItem.request_id).where(
+                        RequestItem.status == RequestItemStatus.PLANNED
+                    )
+                )
+            )
+            validate_association = lambda a, u: True
+
+        elif user.is_executor:
+            conditions.append(
+                Request.id.in_(
+                    sa.select(RequestItem.request_id).where(
+                        RequestItem.executor_id == user.executor_profile.id,
+                        RequestItem.status == RequestItemStatus.PLANNED
+                    )
+                )
+            )
+            validate_association = lambda a, u: a.executor_id == u.executor_profile.id
+
+        elif user.is_executor_organization:
+            conditions.append(
+                Request.id.in_(
+                    sa.select(RequestItem.request_id).where(
+                        RequestItem.executor_organization_id == user.executor_organization_profile.id,
+                        RequestItem.status == RequestItemStatus.PLANNED
+                    )
+                )
+            )
+            validate_association = lambda a, u: a.executor_organization_id == u.executor_organization_profile.id
+
+        else:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
+
+        if status_filter and status_filter != "all" and STATUS_MAPPING.get(status_filter):
+            conditions.append(Request.status == STATUS_MAPPING[status_filter])
+
+        if type_filter and type_filter != "all" and TYPE_MAPPING.get(type_filter):
+            conditions.append(Request.request_type == TYPE_MAPPING[type_filter])
+
+        query = query.where(sa.and_(*conditions))
+
+        requests_result = await session.execute(query)
+        requests = requests_result.scalars().all()
+
+        return [
+            RequestExecutorResponse(
+                registration_number=request.registration_number,
+                item=ItemsNameRequest(
+                    id=association.item.id,
+                    name=association.item.name,
+                    quantity=association.count,
+                ),
+                request_type={
+                    "name": request.request_type.name,
+                    "value": request.request_type.value
+                },
+                status={
+                    "name": association.status.name,
+                    "value": association.status.value
+                },
+                is_emergency=request.is_emergency,
+                created_at=request.created_at,
+                deadline=association.deadline_planning,
+                rights=RightsResponse(
+                    view=True,
+                    edit=False,
+                    approve=False,
+                    reject_before=False,
+                    reject_after=False,
+                    redirect_management_department=False,
+                    redirect_executor=False,
+                    redirect_org=association.status not in (RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED),
+                    deadline=association.status not in (RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED),
+                    planning=association.status not in (RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED,
+                                                        RequestItemStatus.PLANNED),
+                    ready=association.status not in (RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED),
+                    confirm_management_department=False,
+                    confirm_management=False
+                )
+            )
+            for request in requests
+            for association in request.item_associations
+            if validate_association(association, user) and association.status == RequestItemStatus.PLANNED
+        ]
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error view requests for executor: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error view requests for executor: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
 
 
@@ -260,10 +447,12 @@ async def sql_get_requests_for_executor(
 @connection
 async def sql_get_request_details(
         registration_number: str,
-        role: UserRole,
+        user: User,
         session: AsyncSession
 ) -> RequestDetailResponse:
     try:
+        role = user.role
+
         request_result = await session.execute(
             sa.select(Request)
             .where(Request.registration_number == registration_number)
@@ -285,6 +474,32 @@ async def sql_get_request_details(
         )
 
         request = request_result.scalar_one()
+        items = []
+        for association in request.item_associations:
+            right_item = get_right_for_item_by_role(
+                executor_id=association.executor_id,
+                organization_id=association.executor_organization_id,
+                user=user
+            )
+            items.append(ItemsNameRequestFull(
+                id=association.item_id,
+                name=f"{association.item.name} {association.item.description}".strip(),
+                quantity=association.count,
+                executor=UserResponse(
+                    id=association.executor.user.id,
+                    name=association.executor.user.full_name
+                ) if association.executor else None,
+                executor_organization=UserResponse(
+                    id=association.executor_organization.user.id,
+                    name=association.executor_organization.user.full_name
+                ) if association.executor_organization else None,
+                description_executor=(association.description_executor if right_item and
+                                      not user.is_executor_organization else None),
+                description_organization=association.description_organization if right_item else None,
+                deadline_executor=association.deadline_executor,
+                deadline_organization=association.deadline_organization,
+                access=right_item and not user.is_executor_organization
+            ))
 
         return RequestDetailResponse(
             registration_number=request.registration_number,
@@ -296,27 +511,7 @@ async def sql_get_request_details(
                 "name": request.status.name,
                 "value": request.status.value
             },
-            items=[
-                ItemsNameRequest(
-                    id=association.item_id,
-                    name=f"{association.item.name} {association.item.description}".strip(),
-                    quantity=association.count,
-                    executor=UserResponse(
-                        id=association.executor.user.id,
-                        name=association.executor.user.full_name
-                    ) if association.executor else None,
-                    executor_organization=UserResponse(
-                        id=association.executor_organization.user.id,
-                        name=association.executor_organization.user.full_name
-                    ) if association.executor_organization else None,
-                    description_executor=association.description_executor if role in \
-                        (UserRole.MANAGEMENT, UserRole.MANAGEMENT_DEPARTMENT, UserRole.EXECUTOR) else None,
-                    description_organization=association.description_organization if role in \
-                        (UserRole.MANAGEMENT, UserRole.MANAGEMENT_DEPARTMENT,
-                         UserRole.EXECUTOR, UserRole.EXECUTOR_ORGANIZATION) else None,
-                )
-                for association in request.item_associations
-            ],
+            items=items,
             description=request.description,
             description_management_department=request.description_management_department if \
                 role in (UserRole.MANAGEMENT, UserRole.MANAGEMENT_DEPARTMENT) else None,
@@ -377,6 +572,12 @@ async def sql_get_request_details(
                                                          RequestStatus.CANCELLED),
                 redirect_org=request.status not in (RequestStatus.COMPLETED,
                                                     RequestStatus.CANCELLED),
+                deadline=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED),
+                planning=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED),
+                ready=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED),
+                confirm_management_department=request.status not in (RequestStatus.COMPLETED,
+                                                                     RequestStatus.CANCELLED),
+                confirm_management=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED)
             )
         )
 
@@ -690,6 +891,7 @@ async def sql_redirect_executor_request(
         registration_number: str,
         user_id: int,
         data: RedirectRequestWithDeadline,
+        user: User,
         session: AsyncSession
 ) -> None:
     try:
@@ -705,15 +907,19 @@ async def sql_redirect_executor_request(
 
         request = request_result.scalar_one()
 
-        executor_user_result = await session.execute(
-            sa.select(User)
-            .join(Executor, Executor.user_id == User.id)
+        executor_result = await session.execute(
+            sa.select(Executor)
             .where(Executor.id == data.user_role_id)
+            .options(so.joinedload(Executor.user))
         )
-        executor_user = executor_user_result.scalar_one_or_none()
+        executor = executor_result.scalar_one_or_none()
 
-        if executor_user is None:
+        if executor is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Executor not found")
+
+        if (user.role == UserRole.MANAGEMENT_DEPARTMENT and
+            executor.management_department_id != user.management_department_profile.id):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
         request_item = next((obj for obj in request.item_associations if obj.item_id == data.item_id), None)
 
@@ -732,7 +938,7 @@ async def sql_redirect_executor_request(
             action=RequestAction.APPOINTED,
             request_id=request.id,
             user_id=user_id,
-            description=f"Заявка отправлена на выполнение\nИсполнитель: {executor_user.full_name}"
+            description=f"Заявка отправлена на выполнение\nИсполнитель: {executor.user.full_name}"
         )
         session.add(new_history)
 
@@ -760,6 +966,7 @@ async def sql_redirect_organization_request(
         registration_number: str,
         user_id: int,
         data: RedirectRequestWithDeadline,
+        user: User,
         session: AsyncSession
 ) -> None:
     try:
@@ -790,8 +997,8 @@ async def sql_redirect_organization_request(
         if request_item is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
 
-        if request_item.status in (RequestStatus.REGISTERED, RequestStatus.CANCELLED) or \
-            request_item.status in (RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED):
+        if request_item.status in (RequestItemStatus.COMPLETED, RequestStatus.REGISTERED, RequestStatus.CANCELLED) or \
+                (user.role == UserRole.EXECUTOR and user.executor_profile.id != request_item.executor_id):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
         request_item.executor_organization_id = data.user_role_id
@@ -893,6 +1100,7 @@ async def sql_redirect_management_request(
 async def sql_execute_request(
         registration_number: str,
         user_id: int,
+        item_id: int,
         session: AsyncSession
 ) -> None:
     try:
@@ -901,20 +1109,36 @@ async def sql_execute_request(
             .where(
                 Request.registration_number == registration_number
             )
+            .options(
+                so.selectinload(Request.item_associations).joinedload(RequestItem.item)
+            )
         )
 
         request = request_result.scalar_one()
 
-        if request.status != RequestStatus.IN_PROGRESS:
+        if request.status not in (RequestStatus.IN_PROGRESS, RequestStatus.PARTIALLY_FULFILLED):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
-        request.status = RequestStatus.COMPLETED
+        item_association = next(
+            (request_item for request_item in request.item_associations if request_item.item_id == item_id),
+            None
+        )
+
+        item_association.status = RequestItemStatus.COMPLETED
+        len_items_completed = len([0 for request_item in request.item_associations if request_item != item_association \
+                    and request_item.status == RequestItemStatus.COMPLETED])
+
+        if len(request.item_associations) -  len_items_completed == 1:
+            request.status = RequestStatus.COMPLETED
+
+        else:
+            request.status = RequestStatus.PARTIALLY_FULFILLED
 
         new_history = RequestHistory(
-            action=RequestAction.IN_PROGRESS,
+            action=RequestAction.COMPLETED,
             request_id=request.id,
             user_id=user_id,
-            description=f"Заявка выполнена"
+            description=f"Предмет: {item_association.item.name} выполнен"
         )
         session.add(new_history)
 
@@ -933,4 +1157,62 @@ async def sql_execute_request(
 
     except Exception as e:
         config.logger.error(f"Unexpected error execute request: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
+
+
+# Добавление предмета в планирование
+@connection
+async def sql_planning_request(
+        registration_number: str,
+        user_id: int,
+        data: PlanningRequest,
+        session: AsyncSession
+) -> None:
+    try:
+        request_result = await session.execute(
+            sa.select(Request)
+            .where(
+                Request.registration_number == registration_number
+            )
+            .options(
+                so.selectinload(Request.item_associations).joinedload(RequestItem.item)
+            )
+        )
+
+        request = request_result.scalar_one()
+
+        if request.status not in (RequestStatus.IN_PROGRESS, RequestStatus.PARTIALLY_FULFILLED):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
+
+        item_association = next(
+            (request_item for request_item in request.item_associations if request_item.item_id == data.item_id),
+            None
+        )
+
+        item_association.status = RequestItemStatus.PLANNED
+        item_association.deadline_planning = data.deadline
+
+        new_history = RequestHistory(
+            action=RequestAction.PLANNING,
+            request_id=request.id,
+            user_id=user_id,
+            description=f"Предмет: {item_association.item.name} отправлен в планирование"
+        )
+        session.add(new_history)
+
+        await session.commit()
+
+    except NoResultFound:
+        config.logger.info(f"Request not found by registration_number: {registration_number}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found")
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error planning request: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error planning request: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")

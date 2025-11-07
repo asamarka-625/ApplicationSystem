@@ -178,7 +178,7 @@ async function loadRequests() {
         const typeFilter = document.getElementById('typeFilter').value;
 
         // В реальном приложении - запрос к API с фильтрами
-        const response = await fetch(`${API_URL}/list/?status=${statusFilter}&request_type=${typeFilter}`);
+        const response = await fetch(`${API_URL}/list/requests/?status=${statusFilter}&request_type=${typeFilter}`);
         const data = await response.json();
 
         displayRequests(data);
@@ -230,11 +230,7 @@ function displayRequests(data) {
                         <a class="btn-redirect" href="/request/${request.registration_number}/redirect/management">
                             <i class="fa-solid fa-calendar-check"></i> Назначить сотрудника управления
                         </a> ` : ''}
-                    ${rights.reject_before && request.rights.reject_before ? `
-                        <button class="btn-reject" onclick="openRejectModal(event, '${request.registration_number}')">
-                            <i class="fa-solid fa-xmark"></i> Отклонить
-                        </button> ` : ''}
-                    ${rights.reject_after && request.rights.reject_after ? `
+                    ${(rights.reject_after && request.rights.reject_after) || (rights.reject_before && request.rights.reject_before) ? `
                         <button class="btn-reject" onclick="openRejectModal(event, '${request.registration_number}')">
                             <i class="fa-solid fa-xmark"></i> Отклонить
                         </button> ` : ''}
@@ -247,7 +243,6 @@ function displayRequests(data) {
         `;
         tbody.appendChild(row);
     });
-    initDateTimePicker();
 }
 
 // Экспорт в Excel
@@ -272,180 +267,6 @@ async function exportToExcel() {
         console.error('Ошибка экспорта:', error);
         showNotification('Ошибка экспорта данных', 'error');
     }
-}
-
-// Глобальные переменные
-let selectedDateTime = null;
-
-// Инициализация datetime picker
-function initDateTimePicker() {
-    const modal = document.getElementById('dateTimeModal');
-    const listOpenBtn = document.querySelectorAll('.btn-deadline');
-    const cancelBtn = document.getElementById('cancelDateTime');
-    const confirmBtn = document.getElementById('confirmDateTime');
-    const closeBtn = modal.querySelector('.close');
-    const dateInput = document.getElementById('dateInput');
-    const timeSelect = document.getElementById('timeSelect');
-    const selectedDisplay = document.getElementById('selectedDisplay');
-
-    // Устанавливаем минимальную дату (сегодня)
-    const today = new Date().toISOString().split('T')[0];
-    dateInput.min = today;
-
-    // Заполняем варианты времени
-    populateTimeOptions();
-
-    // Открытие модального окна
-    listOpenBtn.forEach(openBtn => {
-        openBtn.addEventListener('click', () => {
-            openDateTimeModal(openBtn.dataset.regId);
-        });
-    });
-
-    // Закрытие модального окна
-    cancelBtn.addEventListener('click', closeDateTimeModal);
-    closeBtn.addEventListener('click', closeDateTimeModal);
-
-    // Закрытие при клике вне модального окна
-    window.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeDateTimeModal();
-        }
-    });
-
-    // Обработчики изменений
-    dateInput.addEventListener('change', updateDateTimeSelection);
-    timeSelect.addEventListener('change', updateDateTimeSelection);
-
-    // Подтверждение выбора
-    confirmBtn.addEventListener('click', confirmDateTimeSelection);
-}
-
-// Заполнение вариантов времени
-function populateTimeOptions() {
-    const timeSelect = document.getElementById('timeSelect');
-    const times = [];
-
-    // Создаем временные интервалы с 8:00 до 20:00 с шагом 30 минут
-    for (let hour = 8; hour <= 20; hour++) {
-        for (let minute = 0; minute < 60; minute += 30) {
-            const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-            times.push(timeString);
-        }
-    }
-
-    // Очищаем и заполняем select
-    timeSelect.innerHTML = '<option value="">Выберите время</option>';
-    times.forEach(time => {
-        const option = document.createElement('option');
-        option.value = time;
-        option.textContent = time;
-        timeSelect.appendChild(option);
-    });
-}
-
-// Открытие модального окна
-function openDateTimeModal(registration_number) {
-    const modal = document.getElementById('dateTimeModal');
-    modal.setAttribute('data-reg-id', registration_number);
-    modal.style.display = 'block';
-
-    // Сброс выбора
-    document.getElementById('dateInput').value = '';
-    document.getElementById('timeSelect').value = '';
-    document.getElementById('selectedDisplay').textContent = '—';
-    document.getElementById('confirmDateTime').disabled = true;
-
-    selectedDateTime = null;
-}
-
-// Закрытие модального окна
-function closeDateTimeModal() {
-    const modal = document.getElementById('dateTimeModal');
-    modal.style.display = 'none';
-}
-
-// Обновление выбора даты и времени
-function updateDateTimeSelection() {
-    const dateInput = document.getElementById('dateInput');
-    const timeSelect = document.getElementById('timeSelect');
-    const selectedDisplay = document.getElementById('selectedDisplay');
-    const confirmBtn = document.getElementById('confirmDateTime');
-
-    const date = dateInput.value;
-    const time = timeSelect.value;
-
-    if (date && time) {
-        selectedDateTime = `${date}T${time}:00`;
-        selectedDisplay.textContent = `${formatDisplayDate(date)} в ${time}`;
-        confirmBtn.disabled = false;
-    } else {
-        selectedDateTime = null;
-        selectedDisplay.textContent = '—';
-        confirmBtn.disabled = true;
-    }
-}
-
-// Форматирование даты для отображения
-function formatDisplayDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('ru-RU', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-    });
-}
-
-// Подтверждение выбора и отправка на сервер
-async function confirmDateTimeSelection() {
-    if (!selectedDateTime) {
-        showNotification('Пожалуйста, выберите дату и время', 'warning');
-        return;
-    }
-
-    const modal = document.getElementById('dateTimeModal');
-    const registration_number = modal.dataset.regId;
-
-    try {
-        // Отправка данных на сервер
-        const response = await sendDateTimeToServer(selectedDateTime, registration_number);
-
-        if (response.status === 'success') {
-            showNotification('Дата и время успешно сохранены', 'success');
-            closeDateTimeModal();
-
-            // Обновляем скрытые поля
-            document.getElementById('selectedDate').value = selectedDateTime.split('T')[0];
-            document.getElementById('selectedTime').value = selectedDateTime.split('T')[1];
-
-            document.location.reload();
-        } else {
-            throw new Error(response.message || 'Ошибка сервера');
-        }
-
-    } catch (error) {
-        console.error('Ошибка при отправке даты и времени:', error);
-        showNotification('Ошибка при сохранении даты и времени', 'error');
-    }
-}
-
-// Функция отправки на сервер
-async function sendDateTimeToServer(dateTime, registration_number) {
-    const response = await fetch(`${API_BASE_URL}/deadline/${registration_number}`, {
-        method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            scheduled_datetime: dateTime
-        })
-    });
-
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
 }
 
 document.addEventListener('DOMContentLoaded', function() {

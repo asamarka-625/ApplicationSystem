@@ -37,32 +37,26 @@ async def requests_page(
 ):
     context = {
         "request": request,
-        "page": "requests",
-        "title": "Заявки",
         "full_name": current_user.full_name,
         "role": current_user.role.name,
         "role_value": current_user.role.value.capitalize()
     }
 
-    return templates.TemplateResponse('requests.html', context=context)
+    if current_user.is_executor or current_user.is_executor_organization:
+        html_template = "requests_executors.html"
+        context.update({
+            "page": "requests_executors",
+            "title": "Заявки на исполнения"
+        })
 
+    else:
+        html_template = "requests.html"
+        context.update({
+            "page": "requests",
+            "title": "Заявки"
+        })
 
-# Страница просмотра списков заявок исполнителей
-@router.get("/requests-executors", response_class=HTMLResponse)
-async def requests_page(
-        request: Request,
-        current_user: User = Depends(get_current_user)
-):
-    context = {
-        "request": request,
-        "page": "requests_executors",
-        "title": "Заявки на исполнения",
-        "full_name": current_user.full_name,
-        "role": current_user.role.name,
-        "role_value": current_user.role.value.capitalize()
-    }
-
-    return templates.TemplateResponse('requests_executors.html', context=context)
+    return templates.TemplateResponse(html_template, context=context)
 
 
 # Страница детального просмотра заявки
@@ -123,6 +117,28 @@ async def redirect_management_page(
     }
 
     return templates.TemplateResponse('redirect_management.html', context=context)
+
+
+# Страница просмотра планирования
+@router.get("/planning", response_class=HTMLResponse)
+async def planning_page(
+        request: Request,
+        current_user: User = Depends(get_current_user)
+):
+    if not (current_user.is_management or current_user.is_management_department or
+            current_user.is_executor or current_user.is_executor_organization):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
+
+    context = {
+        "request": request,
+        "page": "planning",
+        "title": "Планирование",
+        "full_name": current_user.full_name,
+        "role": current_user.role.name,
+        "role_value": current_user.role.value.capitalize()
+    }
+
+    return templates.TemplateResponse('planning.html', context=context)
 
 
 # Страница аутентификации

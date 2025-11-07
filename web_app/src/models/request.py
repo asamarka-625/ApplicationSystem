@@ -124,18 +124,6 @@ class Request(Base):
         nullable=True,
         index=True
     )
-    executor_id: so.Mapped[Optional[int]] = so.mapped_column(
-        sa.Integer,
-        sa.ForeignKey("executors.id"),
-        nullable=True,
-        index=True
-    )
-    executor_organization_id: so.Mapped[Optional[int]] = so.mapped_column(
-        sa.Integer,
-        sa.ForeignKey("executor_organizations.id"),
-        nullable=True,
-        index=True
-    )
     department_id: so.Mapped[int] = so.mapped_column(
         sa.Integer,
         sa.ForeignKey("departments.id"),
