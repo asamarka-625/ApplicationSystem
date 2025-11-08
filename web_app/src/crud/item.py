@@ -32,7 +32,8 @@ async def sql_create_category_and_items(
                     category_id=new_category.id
                 )
                 session.add(new_item)
-
+        await session.commit()
+        
     except SQLAlchemyError as e:
         config.logger.error(f"Database error create category and items: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
