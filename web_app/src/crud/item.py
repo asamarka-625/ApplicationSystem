@@ -10,6 +10,38 @@ from web_app.src.models import Item, Category
 from web_app.src.core import connection
 
 
+# Создаем категории и товары из данных
+@connection
+async def sql_create_category_and_items(
+    data: Dict[str, Dict[int, str]],
+    session: AsyncSession
+) -> None:
+    try:
+        for category, items in result.items():
+            new_category = Category(
+                name=category
+            )
+            session.add(new_category)
+            await session.flush()
+            
+            for item_id, item in items.items():
+                new_item = Item(
+                    serial_number=str(item_id),
+                    name=item[0],
+                    description=item[1],
+                    category_id=new_category.id
+                )
+                session.add(new_item)
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error create category and items: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error create category and items: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
+        
+        
 # Проверяем, существует ли товар с таким номером
 @connection
 async def sql_chek_existing_item_by_serial(serial_number: str, session: AsyncSession) -> bool:
