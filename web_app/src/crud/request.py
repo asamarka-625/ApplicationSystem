@@ -969,7 +969,7 @@ async def sql_redirect_executor_request(
             request_id=request.id,
             user_id=user_id,
             description=(f"Заявка отправлена на выполнение\nИсполнитель: {executor.user.full_name}"
-                         f"Срок: {data.deadline.strftime("%d.%m.%Y")}"))
+                         f"Срок: {data.deadline.strftime("%d.%m.%Y")}")
         )
         session.add(new_history)
 
