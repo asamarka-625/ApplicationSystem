@@ -48,7 +48,7 @@ class Config:
         'image': 5 * 1024 * 1024,  # 5MB
         'video': 50 * 1024 * 1024,  # 50MB
     })
-
+    
     def __post_init__(self):
         self.logger = setup_logger(
             level=os.getenv("LOG_LEVEL", "INFO")

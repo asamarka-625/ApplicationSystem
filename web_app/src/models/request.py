@@ -1,7 +1,7 @@
 # Внешние зависимости
 from typing import Optional, List
 from datetime import datetime
-import enum
+from enum import Enum
 import sqlalchemy as sa
 import sqlalchemy.orm as so
 # Внутренние модули
@@ -10,21 +10,22 @@ from web_app.src.models.table import RequestItem
 
 
 # Enum для статуса заявки
-class RequestStatus(enum.Enum):
+class RequestStatus(Enum):
     REGISTERED = "зарегистрирована"
     CONFIRMED = "подтверждена"
     IN_PROGRESS = "в работе"
     PARTIALLY_FULFILLED = "частично выполнена"
+    PLANNED = "запланирована"
     COMPLETED = "выполнена"
     CANCELLED = "отменена"
 
 # Enum для типа заявки
-class RequestType(enum.Enum):
+class RequestType(Enum):
     MATERIAL = "материально-техническое обеспечение"
     TECHNICAL = "техническое обслуживание"
 
 # Enum для действий, которые можно делать с заявкой
-class RequestAction(enum.Enum):
+class RequestAction(Enum):
     REGISTERED = "зарегистрирована"
     UPDATE = "обновлена"
     CONFIRMED = "подтверждена"
@@ -34,7 +35,7 @@ class RequestAction(enum.Enum):
     IN_PROGRESS = "в работе"
     COMPLETED = "выполнена"
     CANCELLED = "отменена"
-    PLANNING = "запланирована"
+    PLANNED = "запланирована"
 
 
 STATUS_MAPPING = {

@@ -1,7 +1,7 @@
 # Внешние зависимости
 from typing import Optional, List
 from datetime import datetime
-import enum
+from enum import Enum
 import sqlalchemy as sa
 import sqlalchemy.orm as so
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -10,7 +10,7 @@ from web_app.src.models.base import Base
 
 
 # Enum для роли пользователя
-class UserRole(enum.Enum):
+class UserRole(Enum):
     SECRETARY = "секретарь суда"
     JUDGE = "мировой судья"
     MANAGEMENT = "сотрудник управления"

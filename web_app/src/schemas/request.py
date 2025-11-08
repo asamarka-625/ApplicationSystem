@@ -1,10 +1,34 @@
 # Внешние зависимости
 from typing import Annotated, List, Optional, Dict, Any
 from datetime import datetime
+from enum import Enum
 from pydantic import BaseModel, Field
 # Внутренние модули
-from web_app.src.models import TYPE_MAPPING
+from web_app.src.models import TYPE_MAPPING, RequestStatus
 from web_app.src.schemas.user import UserResponse
+
+
+# Enum для фактического статуса заявке
+class ActualStatusRequest(Enum):
+    CANCELLED = "cancelled"
+    OVERDUE = "overdue"
+    PLANNED = "planned"
+    PARTIALLY_FULFILLED = "partially"
+    COMPLETED = "completed"
+    IN_PROGRESS = "progress"
+    CONFIRMED = "confirmed"
+    REGISTERED = "registered"
+    
+
+ACTUAL_STATUS_MAPPING = {
+    RequestStatus.CANCELLED: ActualStatusRequest.CANCELLED,
+    RequestStatus.PLANNED: ActualStatusRequest.PLANNED,
+    RequestStatus.PARTIALLY_FULFILLED: ActualStatusRequest.PARTIALLY_FULFILLED,
+    RequestStatus.COMPLETED: ActualStatusRequest.COMPLETED,
+    RequestStatus.IN_PROGRESS: ActualStatusRequest.IN_PROGRESS,
+    RequestStatus.CONFIRMED: ActualStatusRequest.CONFIRMED,
+    RequestStatus.REGISTERED: ActualStatusRequest.REGISTERED
+}
 
 
 # Схема ID предмета заявки
@@ -59,7 +83,8 @@ class RequestResponse(BaseModel):
     is_emergency: bool
     created_at: datetime
     rights: RightsResponse
-
+    actual_status: ActualStatusRequest
+    
 
 # Схема ответа данных о заявки
 class RequestDataResponse(BaseModel):
@@ -149,6 +174,7 @@ class RequestExecutorResponse(BaseModel):
     created_at: datetime
     deadline: Optional[datetime]
     rights: RightsResponse
+    actual_status: ActualStatusRequest
 
 
 # Схема планирования предмета

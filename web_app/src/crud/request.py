@@ -1,5 +1,6 @@
 # Внешние зависимости
 from typing import List, Optional
+from datetime import datetime
 import uuid
 import sqlalchemy as sa
 import sqlalchemy.orm as so
@@ -17,10 +18,10 @@ from web_app.src.schemas import (CreateRequest, RequestResponse, RequestDetailRe
                                  RequestHistoryResponse, RequestDataResponse, RightsResponse,
                                  RedirectRequest, UserResponse, AttachmentsRequest, ItemsNameRequest,
                                  ItemsNameRequestFull, RedirectRequestWithDeadline, RequestExecutorResponse,
-                                 PlanningRequest)
+                                 PlanningRequest, ActualStatusRequest)
 
 
-# Вспомогательная функция для поучения прав для взаимодействия с предметом
+# Вспомогательная функция для получения прав для взаимодействия с предметом
 def get_right_for_item_by_role(
     executor_id: Optional[int],
     organization_id: Optional[int],
@@ -38,6 +39,25 @@ def get_right_for_item_by_role(
     return False
 
 
+# Вспомогательная функция для получения просрочки заявке
+def get_overdue_request(
+    role: UserRole,
+    item_associations: List[RequestItem]
+) -> bool:
+    
+    if role not in (UserRole.MANAGEMENT, UserRole.MANAGEMENT_DEPARTMENT, 
+                    UserRole.EXECUTOR, UserRole.EXECUTOR_ORGANIZATION):
+        return False
+        
+    now = datetime.now()
+    for association in item_associations:
+        if (association.deadline_executor < now or association.deadline_organization < now 
+            or association.deadline_planning < now):
+            return True
+
+    return False
+    
+    
 # Создаем новую заявку
 @connection
 async def sql_create_request(
@@ -142,10 +162,16 @@ async def sql_get_requests_by_user(
         elif user.is_management:
             query = query.where(
                 Request.status != RequestStatus.REGISTERED
+            ).options(
+                so.selectinload(Request.item_associations)
             )
 
         elif user.is_management_department:
-            query = query.where(Request.management_department_id == user.management_department_profile.id)
+            query = query.where(
+                Request.management_department_id == user.management_department_profile.id
+            ).options(
+                so.selectinload(Request.item_associations)
+            )
 
         else:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
@@ -190,7 +216,9 @@ async def sql_get_requests_by_user(
                     confirm_management_department=request.status not in (RequestStatus.COMPLETED,
                                                                          RequestStatus.CANCELLED),
                     confirm_management=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED)
-                )
+                ),
+                actual_status=(ActualStatusRequest.OVERDUE if get_overdue_request(user.role, request.item_associations)
+                               else ACTUAL_STATUS_MAPPING[request.status])
             )
             for request in requests
         ]
@@ -295,7 +323,9 @@ async def sql_get_requests_for_executor(
                     ready=association.status not in (RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED),
                     confirm_management_department=False,
                     confirm_management=False
-                )
+                ),
+                actual_status=(ActualStatusRequest.OVERDUE if get_overdue_request(user.role, request.item_associations)
+                               else ACTUAL_STATUS_MAPPING[request.status])
             )
             for request in requests
             for association in request.item_associations
@@ -938,7 +968,8 @@ async def sql_redirect_executor_request(
             action=RequestAction.APPOINTED,
             request_id=request.id,
             user_id=user_id,
-            description=f"Заявка отправлена на выполнение\nИсполнитель: {executor.user.full_name}"
+            description=(f"Заявка отправлена на выполнение\nИсполнитель: {executor.user.full_name}"
+                         f"Срок: {data.deadline.strftime("%d.%m.%Y")}"))
         )
         session.add(new_history)
 
@@ -1009,7 +1040,8 @@ async def sql_redirect_organization_request(
             action=RequestAction.APPOINTED,
             request_id=request.id,
             user_id=user_id,
-            description=f"Заявка отправлена на выполнение\nИсполнитель: {org_user.full_name}"
+            description=(f"Заявка отправлена на выполнение\nИсполнитель: {org_user.full_name}\n"
+                         f"Срок: {data.deadline.strftime("%d.%m.%Y")}")
         )
         session.add(new_history)
 
@@ -1119,18 +1151,29 @@ async def sql_execute_request(
         if request.status not in (RequestStatus.IN_PROGRESS, RequestStatus.PARTIALLY_FULFILLED):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
-        item_association = next(
-            (request_item for request_item in request.item_associations if request_item.item_id == item_id),
+        association_num = next(
+            (i for i, request_item in enumerate(request.item_associations) if request_item.item_id == item_id),
             None
         )
 
-        item_association.status = RequestItemStatus.COMPLETED
-        len_items_completed = len([0 for request_item in request.item_associations if request_item != item_association \
-                    and request_item.status == RequestItemStatus.COMPLETED])
-
-        if len(request.item_associations) -  len_items_completed == 1:
+        request.item_associations[association_num].status = RequestItemStatus.COMPLETED
+        
+        sum_items_completed = sum(
+            filter(lambda x: x.status == (RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED), request.item_associations)
+        )
+        sum_items_completed_and_planned = sum(
+            filter(
+                lambda x: x.status in (RequestItemStatus.PLANNED, RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED),
+                request.item_associations
+            )
+        )
+        
+        if len(request.item_associations) == sum_items_completed:
             request.status = RequestStatus.COMPLETED
-
+        
+        elif len(request.item_associations) == sum_items_completed_and_planned:
+            request.status = RequestStatus.PLANNED
+            
         else:
             request.status = RequestStatus.PARTIALLY_FULFILLED
 
@@ -1184,16 +1227,29 @@ async def sql_planning_request(
         if request.status not in (RequestStatus.IN_PROGRESS, RequestStatus.PARTIALLY_FULFILLED):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
-        item_association = next(
-            (request_item for request_item in request.item_associations if request_item.item_id == data.item_id),
+        association_num = next(
+            (i for i, request_item in enumerate(request.item_associations) if request_item.item_id == item_id),
             None
         )
 
-        item_association.status = RequestItemStatus.PLANNED
-        item_association.deadline_planning = data.deadline
+        request.item_associations[association_num].status = RequestItemStatus.PLANNED
+        request.item_associations[association_num].deadline_planning = data.deadline
+        
+        sum_items_completed_and_planned = sum(
+            filter(
+                lambda x: x.status in (RequestItemStatus.PLANNED, RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED),
+                request.item_associations
+            )
+        )
+        
+        if len(request.item_associations) == sum_items_completed_and_planned:
+            request.status = RequestStatus.PLANNED
+            
+        else:
+            request.status = RequestStatus.PARTIALLY_FULFILLED
 
         new_history = RequestHistory(
-            action=RequestAction.PLANNING,
+            action=RequestAction.PLANNED,
             request_id=request.id,
             user_id=user_id,
             description=f"Предмет: {item_association.item.name} отправлен в планирование"

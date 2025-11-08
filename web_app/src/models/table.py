@@ -1,6 +1,6 @@
 # Внешние зависимости
 from typing import Optional
-import enum
+from enum import Enum
 import sqlalchemy as sa
 import sqlalchemy.orm as so
 # Внутренние модули
@@ -8,7 +8,7 @@ from web_app.src.models.base import Base
 
 
 # Enum для статуса заявки
-class RequestItemStatus(enum.Enum):
+class RequestItemStatus(Enum):
     REGISTERED = "зарегистрирована"
     IN_PROGRESS = "в работе"
     COMPLETED = "выполнена"
