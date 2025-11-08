@@ -17,7 +17,7 @@ async def sql_create_category_and_items(
     session: AsyncSession
 ) -> None:
     try:
-        for category, items in result.items():
+        for category, items in data.items():
             new_category = Category(
                 name=category
             )
