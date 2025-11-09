@@ -30,6 +30,7 @@ async def create_page(
 
 
 # Страница просмотра списков заявок
+@router.get("/", response_class=HTMLResponse)
 @router.get("/requests", response_class=HTMLResponse)
 async def requests_page(
         request: Request,
