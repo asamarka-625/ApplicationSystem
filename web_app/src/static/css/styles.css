@@ -917,3 +917,41 @@ body {
 .quantity-badge {
     background: #17a2b8;
 }
+
+.tr-registered {
+    background-color: #e3f2fd; /* Светло-синий */
+}
+
+.tr-confirmed {
+    background-color: #e8f5e8; /* Светло-зеленый */
+}
+
+.tr-progress {
+    background-color: #fff3cd; /* Светло-желтый */
+}
+
+.tr-planned {
+    background-color: #ffeaa7; /* Светло-оранжевый */
+}
+
+.tr-partially {
+    background-color: #d1ecf1; /* Светло-голубой */
+}
+
+.tr-completed {
+    background-color: #d4edda; /* Светло-зеленый */
+}
+
+.tr-overdue {
+    background-color: #f8d7da; /* Светло-красный */
+}
+
+.tr-cancelled {
+    background-color: #f1f1f1; /* Серый */
+}
+
+/* Дополнительные стили для лучшего отображения */
+.table tbody tr:hover {
+    opacity: 0.9;
+    transition: opacity 0.2s;
+}

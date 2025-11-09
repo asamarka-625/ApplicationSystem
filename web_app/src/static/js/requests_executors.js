@@ -75,7 +75,7 @@ async function loadRequests() {
         const typeFilter = document.getElementById('typeFilter').value;
 
         // В реальном приложении - запрос к API с фильтрами
-        const response = await fetch(`${API_URL}/list/requests/?status=${statusFilter}&request_type=${typeFilter}`);
+        const response = await fetch(`${API_URL}/list/requests?status=${statusFilter}&request_type=${typeFilter}`);
         const data = await response.json();
 
         displayRequests(data);
@@ -99,6 +99,7 @@ function displayRequests(data) {
 
     requests.forEach(request => {
         const row = document.createElement('tr');
+		row.classList.add(`tr-${request.actual_status}`);
         row.innerHTML = `
             <td>${request.registration_number}</td>
             <td>${request.item.name}<br><span class="badge quantity-badge">${request.item.quantity} шт.</span></td>
@@ -119,7 +120,7 @@ function displayRequests(data) {
                         </a>` : ''}
                     ${rights.planning && request.rights.planning ? `
                         <button class="btn-planning"
-                        onclick="openPlanningModal('${request.registration_number}', ${request.item.id}, '${request.item.name}', ${request.item.quantity})">
+                        onclick="openPlanningModal('${request.registration_number}', ${request.item.id}, '${request.item.name.replace('\n', ' ')}', ${request.item.quantity})">
                             <i class="fa-solid fa-pen-to-square"></i> В планирование
                         </button>` : ''}
                     ${rights.ready && request.rights.ready ? `

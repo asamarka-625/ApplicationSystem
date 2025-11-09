@@ -1,14 +1,14 @@
 const API_URL = '/api/v1/request/view';
 const API_BASE_URL = '/api/v1/request';
 
-async function ExecuteRequest(e, id) {
+async function ExecuteRequest(e, registration_number, item_id) {
     try {
-        const response = await fetch(`${API_BASE_URL}/execute/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/execute/${registration_number}`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
-            }
-            body: JSON.stringify({item_id: item_id})
+            },
+            body: JSON.stringify({id: item_id})
         });
 
         if (!response.ok) {
@@ -75,7 +75,7 @@ async function loadRequests() {
         const typeFilter = document.getElementById('typeFilter').value;
 
         // В реальном приложении - запрос к API с фильтрами
-        const response = await fetch(`${API_URL}/list/planning/?status=${statusFilter}&request_type=${typeFilter}`);
+        const response = await fetch(`${API_URL}/list/planning?status=${statusFilter}&request_type=${typeFilter}`);
         const data = await response.json();
 
         displayRequests(data);
@@ -99,6 +99,7 @@ function displayRequests(data) {
 
     requests.forEach(request => {
         const row = document.createElement('tr');
+		row.classList.add(`tr-${request.actual_status}`);
         row.innerHTML = `
             <td>${request.registration_number}</td>
             <td>${request.item.name}<br><span class="badge quantity-badge">${request.item.quantity} шт.</span></td>
@@ -112,7 +113,7 @@ function displayRequests(data) {
                             <i class="fas fa-eye"></i> Просмотр
                         </a>` : ''}
                     ${rights.ready && request.rights.ready ? `
-                        <button class="btn-ready" onclick="ExecuteRequest(event, '${request.registration_number}', ${request.item.id}))">
+                        <button class="btn-ready" onclick="ExecuteRequest(event, '${request.registration_number}', ${request.item.id})">
                             <i class="fa-solid fa-thumbs-up"></i> Готово
                         </button> ` : ''}
                 </div>

@@ -300,10 +300,16 @@ document.addEventListener('DOMContentLoaded', function() {
             executorsSection.appendChild(orgInfo);
             itemDetails.appendChild(executorsSection);
             itemDetails.appendChild(actionButtons);
-
-            // Комментарии
+			
             const descriptionsSection = document.createElement('div');
             descriptionsSection.className = 'descriptions-section';
+			
+            const status_item = document.createElement('div');
+            status_item.innerHTML = `
+                <strong>Статус:</strong>
+                ${item.status}
+            `;
+            descriptionsSection.appendChild(status_item);
 
             const deadline_executor = document.createElement('div');
             deadline_executor.innerHTML = `

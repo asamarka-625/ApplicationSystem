@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, Field
 # Внутренние модули
-from web_app.src.models import TYPE_MAPPING, RequestStatus
+from web_app.src.models import TYPE_MAPPING, RequestStatus, RequestItemStatus
 from web_app.src.schemas.user import UserResponse
 
 
@@ -19,8 +19,7 @@ class ActualStatusRequest(Enum):
     CONFIRMED = "confirmed"
     REGISTERED = "registered"
     
-
-ACTUAL_STATUS_MAPPING = {
+ACTUAL_STATUS_MAPPING_FOR_REQUEST_STATUS = {
     RequestStatus.CANCELLED: ActualStatusRequest.CANCELLED,
     RequestStatus.PLANNED: ActualStatusRequest.PLANNED,
     RequestStatus.PARTIALLY_FULFILLED: ActualStatusRequest.PARTIALLY_FULFILLED,
@@ -28,6 +27,14 @@ ACTUAL_STATUS_MAPPING = {
     RequestStatus.IN_PROGRESS: ActualStatusRequest.IN_PROGRESS,
     RequestStatus.CONFIRMED: ActualStatusRequest.CONFIRMED,
     RequestStatus.REGISTERED: ActualStatusRequest.REGISTERED
+}
+
+ACTUAL_STATUS_MAPPING_FOR_REQUEST_ITEM_STATUS = {
+    RequestItemStatus.CANCELLED: ActualStatusRequest.CANCELLED,
+    RequestItemStatus.PLANNED: ActualStatusRequest.PLANNED,
+    RequestItemStatus.COMPLETED: ActualStatusRequest.COMPLETED,
+    RequestItemStatus.IN_PROGRESS: ActualStatusRequest.IN_PROGRESS,
+    RequestItemStatus.REGISTERED: ActualStatusRequest.REGISTERED
 }
 
 
@@ -117,6 +124,7 @@ class ItemsNameRequestFull(ItemsNameRequest):
     description_organization: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
     deadline_executor: Optional[datetime]
     deadline_organization: Optional[datetime]
+    status: RequestItemStatus
     access: bool
 
 

@@ -142,7 +142,6 @@ async function handleRequestSubmit(e) {
         }
     }
 
-    console.log(formData);
     try {
         const submitButton = document.getElementById('sumbit_create');
         const originalText = submitButton.innerHTML;

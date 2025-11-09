@@ -1,6 +1,6 @@
 # Внешние зависимости
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 import sqlalchemy as sa
 import sqlalchemy.orm as so
@@ -18,7 +18,8 @@ from web_app.src.schemas import (CreateRequest, RequestResponse, RequestDetailRe
                                  RequestHistoryResponse, RequestDataResponse, RightsResponse,
                                  RedirectRequest, UserResponse, AttachmentsRequest, ItemsNameRequest,
                                  ItemsNameRequestFull, RedirectRequestWithDeadline, RequestExecutorResponse,
-                                 PlanningRequest, ActualStatusRequest)
+                                 PlanningRequest, ActualStatusRequest, ACTUAL_STATUS_MAPPING_FOR_REQUEST_STATUS,
+                                 ACTUAL_STATUS_MAPPING_FOR_REQUEST_ITEM_STATUS)
 
 
 # Вспомогательная функция для получения прав для взаимодействия с предметом
@@ -39,21 +40,35 @@ def get_right_for_item_by_role(
     return False
 
 
-# Вспомогательная функция для получения просрочки заявке
-def get_overdue_request(
+# Вспомогательная функция для получения просрочки заявке для управляющих
+def get_overdue_request_for_management(
     role: UserRole,
-    item_associations: List[RequestItem]
+    request: Request
 ) -> bool:
     
-    if role not in (UserRole.MANAGEMENT, UserRole.MANAGEMENT_DEPARTMENT, 
-                    UserRole.EXECUTOR, UserRole.EXECUTOR_ORGANIZATION):
+    if (role not in (UserRole.MANAGEMENT, UserRole.MANAGEMENT_DEPARTMENT) or
+        request.status is RequestStatus.COMPLETED):
         return False
         
-    now = datetime.now()
-    for association in item_associations:
-        if (association.deadline_executor < now or association.deadline_organization < now 
-            or association.deadline_planning < now):
+    now = datetime.now(timezone.utc)
+    for association in request.item_associations:
+        if ((association.deadline_executor and association.deadline_executor < now) or
+            (association.deadline_organization and association.deadline_organization < now) or
+            (association.deadline_planning and association.deadline_planning < now)):
             return True
+
+    return False
+
+
+# Вспомогательная функция для получения просрочки заявке для исполнителей
+def get_overdue_request_for_executor(
+    association: RequestItem
+) -> bool:        
+    now = datetime.now(timezone.utc)
+    if ((association.deadline_executor and association.deadline_executor < now) or
+        (association.deadline_organization and association.deadline_organization < now) or
+        (association.deadline_planning and association.deadline_planning < now)):
+        return True
 
     return False
     
@@ -217,8 +232,8 @@ async def sql_get_requests_by_user(
                                                                          RequestStatus.CANCELLED),
                     confirm_management=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED)
                 ),
-                actual_status=(ActualStatusRequest.OVERDUE if get_overdue_request(user.role, request.item_associations)
-                               else ACTUAL_STATUS_MAPPING[request.status])
+                actual_status=(ActualStatusRequest.OVERDUE if get_overdue_request_for_management(user.role, request)
+                               else ACTUAL_STATUS_MAPPING_FOR_REQUEST_STATUS[request.status])
             )
             for request in requests
         ]
@@ -324,8 +339,8 @@ async def sql_get_requests_for_executor(
                     confirm_management_department=False,
                     confirm_management=False
                 ),
-                actual_status=(ActualStatusRequest.OVERDUE if get_overdue_request(user.role, request.item_associations)
-                               else ACTUAL_STATUS_MAPPING[request.status])
+                actual_status=(ActualStatusRequest.OVERDUE if get_overdue_request_for_executor(association)
+                               else ACTUAL_STATUS_MAPPING_FOR_REQUEST_ITEM_STATUS[association.status])
             )
             for request in requests
             for association in request.item_associations
@@ -454,7 +469,9 @@ async def sql_get_planning_requests(
                     ready=association.status not in (RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED),
                     confirm_management_department=False,
                     confirm_management=False
-                )
+                ),
+                actual_status=(ActualStatusRequest.OVERDUE if get_overdue_request_for_executor(association)
+                               else ActualStatusRequest.PLANNED)
             )
             for request in requests
             for association in request.item_associations
@@ -462,14 +479,14 @@ async def sql_get_planning_requests(
         ]
 
     except SQLAlchemyError as e:
-        config.logger.error(f"Database error view requests for executor: {e}")
+        config.logger.error(f"Database error view requests for planning: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
     except HTTPException:
         raise
 
     except Exception as e:
-        config.logger.error(f"Unexpected error view requests for executor: {e}")
+        config.logger.error(f"Unexpected error view requests for planning: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
 
 
@@ -528,6 +545,7 @@ async def sql_get_request_details(
                 description_organization=association.description_organization if right_item else None,
                 deadline_executor=association.deadline_executor,
                 deadline_organization=association.deadline_organization,
+                status=association.status,
                 access=right_item and not user.is_executor_organization
             ))
 
@@ -545,7 +563,7 @@ async def sql_get_request_details(
             description=request.description,
             description_management_department=request.description_management_department if \
                 role in (UserRole.MANAGEMENT, UserRole.MANAGEMENT_DEPARTMENT) else None,
-            department_name=f"[{request.department.code}] {request.department.name} ({request.department.address})",
+            department_name=f"№{request.department.code} {request.department.name} ({request.department.address})",
             secretary=UserResponse(
                 id=request.secretary.user.id,
                 name=request.secretary.user.full_name
@@ -1148,7 +1166,7 @@ async def sql_execute_request(
 
         request = request_result.scalar_one()
 
-        if request.status not in (RequestStatus.IN_PROGRESS, RequestStatus.PARTIALLY_FULFILLED):
+        if request.status not in (RequestStatus.IN_PROGRESS, RequestStatus.PARTIALLY_FULFILLED, RequestStatus.PLANNED):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
         association_num = next(
@@ -1159,13 +1177,12 @@ async def sql_execute_request(
         request.item_associations[association_num].status = RequestItemStatus.COMPLETED
         
         sum_items_completed = sum(
-            filter(lambda x: x.status == (RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED), request.item_associations)
+            1 for item in request.item_associations
+            if item.status in (RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED)
         )
         sum_items_completed_and_planned = sum(
-            filter(
-                lambda x: x.status in (RequestItemStatus.PLANNED, RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED),
-                request.item_associations
-            )
+            1 for item in request.item_associations
+            if item.status in (RequestItemStatus.PLANNED, RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED)
         )
         
         if len(request.item_associations) == sum_items_completed:
@@ -1181,7 +1198,7 @@ async def sql_execute_request(
             action=RequestAction.COMPLETED,
             request_id=request.id,
             user_id=user_id,
-            description=f"Предмет: {item_association.item.name} выполнен"
+            description=f"Предмет: {request.item_associations[association_num].item.name} выполнен"
         )
         session.add(new_history)
 
@@ -1228,7 +1245,7 @@ async def sql_planning_request(
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
         association_num = next(
-            (i for i, request_item in enumerate(request.item_associations) if request_item.item_id == item_id),
+            (i for i, request_item in enumerate(request.item_associations) if request_item.item_id == data.item_id),
             None
         )
 
@@ -1236,10 +1253,8 @@ async def sql_planning_request(
         request.item_associations[association_num].deadline_planning = data.deadline
         
         sum_items_completed_and_planned = sum(
-            filter(
-                lambda x: x.status in (RequestItemStatus.PLANNED, RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED),
-                request.item_associations
-            )
+            1 for item in request.item_associations
+            if item.status in (RequestItemStatus.PLANNED, RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED)
         )
         
         if len(request.item_associations) == sum_items_completed_and_planned:
@@ -1252,7 +1267,7 @@ async def sql_planning_request(
             action=RequestAction.PLANNED,
             request_id=request.id,
             user_id=user_id,
-            description=f"Предмет: {item_association.item.name} отправлен в планирование"
+            description=f"Предмет: {request.item_associations[association_num].item.name} отправлен в планирование"
         )
         session.add(new_history)
 
