@@ -5,15 +5,16 @@
     <div class="section-header">
         <h1>Заявки</h1>
         <div class="filters">
-            <select id="statusFilter">
-                <option value="">Все статусы</option>
-            </select>
+            <select id="statusFilter"></select>
             <select id="typeFilter">
                 <option value="">Все типы</option>
             </select>
-            <button class="btn btn-secondary" onclick="exportToExcel()">
-                <i class="fas fa-file-excel"></i> Экспорт в Excel
-            </button>
+            <select id="departmentFilter" style="max-width: 50%;">
+                <option value="">Все участки</option>
+            </select>
+           <button class="btn btn-secondary" id="download-excel" onclick="openExportModal()" style="display: none;">
+               <i class="fas fa-file-excel"></i> Экспорт в Excel
+           </button>
         </div>
     </div>
 
@@ -71,6 +72,38 @@
         <div class="modal-footer">
             <button id="addToPlanningBtn" class="btn btn-primary">Добавить в планирование</button>
             <button id="cancelPlanningBtn" class="btn btn-secondary">Отмена</button>
+        </div>
+    </div>
+</div>
+<div id="exportModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000;">
+    <div class="modal-content" style="position: relative; background-color: white; margin: 5% auto; padding: 0; width: 500px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div class="modal-header" style="padding: 16px 20px; border-bottom: 1px solid #dee2e6; display: flex; justify-content: between; align-items: center;">
+            <h5 style="margin: 0; color: #198754; font-weight: 600;">
+                <i class="fas fa-file-excel"></i> Экспорт заявок в Excel
+            </h5>
+            <button type="button" class="close-btn" onclick="closeExportModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6c757d;">
+                &times;
+            </button>
+        </div>
+        <div class="modal-body" style="padding: 20px;">
+            <form id="exportForm">
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label for="exportDateFrom" style="display: block; margin-bottom: 8px; font-weight: 500; color: #495057;">Дата с:</label>
+                    <input type="date" class="form-control" id="exportDateFrom" required style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label for="exportDateUntil" style="display: block; margin-bottom: 8px; font-weight: 500; color: #495057;">Дата по:</label>
+                    <input type="date" class="form-control" id="exportDateUntil" required style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px;">
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer" style="padding: 16px 20px; border-top: 1px solid #dee2e6; display: flex; justify-content: flex-end; gap: 12px;">
+            <button type="button" class="btn btn-secondary" onclick="closeExportModal()" style="padding: 8px 16px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                Отмена
+            </button>
+            <button type="button" class="btn btn-primary" onclick="exportToExcel()" style="padding: 8px 16px; background-color: #198754; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                <i class="fas fa-download"></i> Скачать Excel
+            </button>
         </div>
     </div>
 </div>

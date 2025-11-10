@@ -19,7 +19,7 @@ class Config:
     SECRET_KEY: str = field(default_factory=lambda: os.getenv("SECRET_KEY"))
     ALGORITHM: str = field(default_factory=lambda: os.getenv("ALGORITHM"))
     ACCESS_TOKEN_EXPIRE_MINUTES: int = field(default_factory=lambda: int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")))
-
+    MAINTENANCE_ITEM_ID: int = field(default_factory=lambda: os.getenv("MAINTENANCE_ITEM_ID"))
     USER_DOCUMENTS: str = "web_app/src/static/user_documents/"
     ALLOWED_MIME_TYPES: Dict[str, List[str]] = field(default_factory=lambda: {
         'image': [

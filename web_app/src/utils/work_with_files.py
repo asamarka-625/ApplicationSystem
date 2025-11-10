@@ -57,11 +57,11 @@ async def save_uploaded_files(attachments: Optional[List[UploadFile]]) -> Option
 
 
 # Удаляем файлы
-def delete_files(files_info: List[AttachmentsRequest]) -> Optional[List[AttachmentsRequest]]:
-    for saved_file in files_info:
+def delete_files(file_paths: List[str]) -> None:
+    for file_path in file_paths:
         try:
-            if os.path.exists(saved_file.file_path):
-                os.remove(saved_file.file_path)
+            if os.path.exists(file_path):
+                os.remove(file_path)
         except:
             pass
 

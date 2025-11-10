@@ -45,6 +45,7 @@ async function loadViewInfo() {
         const data = await response.json();
         const request_type_data = data.request_type;
 		const status_data = data.status;
+        const department_data = data.department;
 
         const select_type_filter = document.getElementById('typeFilter');
         request_type_data.forEach(request_type => {
@@ -57,10 +58,21 @@ async function loadViewInfo() {
         const select_status_filter = document.getElementById('statusFilter');
         status_data.forEach(status => {
             const option = document.createElement('option');
-            option.value = status.id
+            option.value = status.id;
             option.textContent = status.name;
             select_status_filter.appendChild(option);
         });
+
+        const select_department_filter = document.getElementById('departmentFilter');
+        department_data.forEach(department => {
+            const option = document.createElement('option');
+            option.value = department.id;
+            option.textContent = department.name;
+            select_department_filter.appendChild(option);
+        });
+
+        initializeFilterListeners();
+        await loadRequests();
 
     } catch (error) {
         console.error('Ошибка загрузки информации:', error);
@@ -68,14 +80,47 @@ async function loadViewInfo() {
     }
 }
 
+function initializeFilterListeners() {
+    const departmentFilter = document.getElementById('departmentFilter');
+
+    if (statusFilter) {
+        statusFilter.addEventListener('change', function() {
+            // Ваша функция здесь
+            loadRequests();
+        });
+    }
+
+    if (typeFilter) {
+        typeFilter.addEventListener('change', function() {
+            // Ваша функция здесь
+            loadRequests();
+        });
+    }
+
+    if (departmentFilter) {
+        departmentFilter.addEventListener('change', function() {
+            // Ваша функция здесь
+            loadRequests();
+        });
+    }
+}
+
 // Загрузка списка заявок
 async function loadRequests() {
     try {
-        const statusFilter = document.getElementById('statusFilter').value;
-        const typeFilter = document.getElementById('typeFilter').value;
+        const statusFilter = document.getElementById('statusFilter').value || null;
+        const typeFilter = document.getElementById('typeFilter').value || null;
+        const departmentFilter = document.getElementById('departmentFilter').value || null;
 
-        // В реальном приложении - запрос к API с фильтрами
-        const response = await fetch(`${API_URL}/list/requests?status=${statusFilter}&request_type=${typeFilter}`);
+        // Создаем объект с параметрами
+        const params = new URLSearchParams();
+
+        if (statusFilter) params.append('status', statusFilter);
+        if (typeFilter) params.append('request_type', typeFilter);
+        if (departmentFilter) params.append('department', departmentFilter);
+
+        const url = `${API_URL}/list/requests?${params.toString()}`;
+        const response = await fetch(url);
         const data = await response.json();
 
         displayRequests(data);
@@ -132,30 +177,6 @@ function displayRequests(data) {
         `;
         tbody.appendChild(row);
     });
-}
-
-// Экспорт в Excel
-async function exportToExcel() {
-    try {
-        const response = await fetch(`${API_URL}/dashboard/export/excel`);
-        const blob = await response.blob();
-
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = `заявки_${new Date().toISOString().split('T')[0]}.xlsx`;
-
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-
-        showNotification('Данные экспортированы в Excel');
-    } catch (error) {
-        console.error('Ошибка экспорта:', error);
-        showNotification('Ошибка экспорта данных', 'error');
-    }
 }
 
 let currentItemId = null;
@@ -218,7 +239,6 @@ async function addToPlanning() {
 
 document.addEventListener('DOMContentLoaded', function() {
     loadViewInfo();
-    loadRequests();
 
     const modalPlanning = document.getElementById('planningModal');
     const closeBtnPlanning = modalPlanning.querySelector('.close');

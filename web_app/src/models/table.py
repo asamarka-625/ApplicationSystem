@@ -15,6 +15,16 @@ class RequestItemStatus(Enum):
     CANCELLED = "отменена"
     PLANNED = "запланирована"
 
+REQUEST_ITEM_STATUS_MAPPING = {
+    "зарегистрирована": RequestItemStatus.REGISTERED,
+    "выполнена": RequestItemStatus.COMPLETED,
+    "отменена": RequestItemStatus.CANCELLED
+}
+
+REQUEST_ITEM_STATUS_ID_MAPPING = [
+    {"id": i, "name": name.capitalize()} for i, name in enumerate(REQUEST_ITEM_STATUS_MAPPING.keys())
+]
+
 
 request_item = sa.Table(
     "request_item",

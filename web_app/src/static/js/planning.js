@@ -43,24 +43,18 @@ async function loadViewInfo() {
     try {
         const response = await fetch(`${API_URL}/filter/info`);
         const data = await response.json();
-        const request_type_data = data.request_type;
-		const status_data = data.status;
+        const department_data = data.department;
 
-        const select_type_filter = document.getElementById('typeFilter');
-        request_type_data.forEach(request_type => {
+        const select_department_filter = document.getElementById('departmentFilter');
+        department_data.forEach(department => {
             const option = document.createElement('option');
-            option.value = request_type.id;
-            option.textContent = request_type.name;
-            select_type_filter.appendChild(option);
+            option.value = department.id;
+            option.textContent = department.name;
+            select_department_filter.appendChild(option);
         });
 
-        const select_status_filter = document.getElementById('statusFilter');
-        status_data.forEach(status => {
-            const option = document.createElement('option');
-            option.value = status.id
-            option.textContent = status.name;
-            select_status_filter.appendChild(option);
-        });
+        initializeFilterListeners();
+        await loadRequests();
 
     } catch (error) {
         console.error('Ошибка загрузки информации:', error);
@@ -68,14 +62,25 @@ async function loadViewInfo() {
     }
 }
 
+function initializeFilterListeners() {
+    const departmentFilter = document.getElementyById('departmentFilter');
+
+    if (departmentFilter) {
+        departmentFilter.addEventListener('change', function() {
+            // Ваша функция здесь
+            loadRequests();
+        });
+    }
+}
+
 // Загрузка списка заявок
 async function loadRequests() {
     try {
-        const statusFilter = document.getElementById('statusFilter').value;
-        const typeFilter = document.getElementById('typeFilter').value;
+        const departmentFilter = document.getElementById('departmentFilter').value || null;
+        const params = new URLSearchParams();
+        if (departmentFilter) params.append('department', departmentFilter);
 
-        // В реальном приложении - запрос к API с фильтрами
-        const response = await fetch(`${API_URL}/list/planning?status=${statusFilter}&request_type=${typeFilter}`);
+        const response = await fetch(`${API_URL}/list/planning?${params.toString()}`);
         const data = await response.json();
 
         displayRequests(data);
@@ -91,6 +96,10 @@ function displayRequests(data) {
     tbody.innerHTML = '';
     const requests = data.planning;
     const rights = data.rights;
+
+    if (rights.download) {
+        document.getElementById("download-excel").style.display = "block";
+    }
 
     if (requests.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Заявки не найдены</td></tr>';
@@ -126,19 +135,44 @@ function displayRequests(data) {
 // Экспорт в Excel
 async function exportToExcel() {
     try {
-        const response = await fetch(`${API_URL}/dashboard/export/excel`);
-        const blob = await response.blob();
+        const departmentFilter = document.getElementById('departmentFilter').value || null;
+        const params = new URLSearchParams();
+        if (departmentFilter) params.append('department', departmentFilter);
 
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = `заявки_${new Date().toISOString().split('T')[0]}.xlsx`;
+        const response = await fetch(`/api/v1/download/planning?${params.toString()}`);
+        if (response.ok) {
+            // Скачиваем файл
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
 
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+            // Получаем имя файла из headers
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = `planning.xlsx`;
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                if (filenameMatch) {
+                    filename = filenameMatch[1];
+                }
+            }
+
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            // Закрываем модальное окно
+            closeExportModal();
+
+            // Показываем уведомление об успехе
+            showNotification('Файл успешно скачан', 'success');
+
+        } else {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Ошибка при загрузке файла');
+        }
 
         showNotification('Данные экспортированы в Excel');
     } catch (error) {
@@ -148,6 +182,5 @@ async function exportToExcel() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    loadViewInfo();
     loadRequests();
 });

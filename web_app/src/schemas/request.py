@@ -18,7 +18,9 @@ class ActualStatusRequest(Enum):
     IN_PROGRESS = "progress"
     CONFIRMED = "confirmed"
     REGISTERED = "registered"
-    
+    ENDING_COMPLETED = "ending_completed"
+    FINISHED = "finished"
+
 ACTUAL_STATUS_MAPPING_FOR_REQUEST_STATUS = {
     RequestStatus.CANCELLED: ActualStatusRequest.CANCELLED,
     RequestStatus.PLANNED: ActualStatusRequest.PLANNED,
@@ -26,7 +28,9 @@ ACTUAL_STATUS_MAPPING_FOR_REQUEST_STATUS = {
     RequestStatus.COMPLETED: ActualStatusRequest.COMPLETED,
     RequestStatus.IN_PROGRESS: ActualStatusRequest.IN_PROGRESS,
     RequestStatus.CONFIRMED: ActualStatusRequest.CONFIRMED,
-    RequestStatus.REGISTERED: ActualStatusRequest.REGISTERED
+    RequestStatus.REGISTERED: ActualStatusRequest.REGISTERED,
+    RequestStatus.ENDING_COMPLETED: ActualStatusRequest.ENDING_COMPLETED,
+    RequestStatus.FINISHED: ActualStatusRequest.FINISHED
 }
 
 ACTUAL_STATUS_MAPPING_FOR_REQUEST_ITEM_STATUS = {
@@ -58,7 +62,7 @@ class AttachmentsRequest(BaseModel):
 
 # Схема запроса на создание заявки
 class CreateRequest(BaseModel):
-    items: Optional[List[ItemsRequest]] = None
+    items: List[ItemsRequest]
     is_emergency: bool = False
     description: Annotated[str, Field(strict=True, strip_whitespace=True)]
     request_type: Annotated[int, Field(ge=0, lt=len(TYPE_MAPPING))]

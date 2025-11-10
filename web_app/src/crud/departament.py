@@ -12,7 +12,7 @@ from web_app.src.core import connection
 
 # Выводим все отделы
 @connection
-async def sql_get_all_departament(session: AsyncSession) -> List[Dict[str, Any]]:
+async def sql_get_all_department(session: AsyncSession) -> List[Dict[str, Any]]:
     try:
         departments_result = await session.execute(
             sa.select(Department)
@@ -20,7 +20,7 @@ async def sql_get_all_departament(session: AsyncSession) -> List[Dict[str, Any]]
         departments = departments_result.scalars()
 
         return [
-            {"code": d.id, "name": f"[{d.code}] {d.name} ({d.address})"}
+            {"id": d.id, "name": f"№{d.code} {d.name} ({d.address})"}
             for d in departments
         ]
 

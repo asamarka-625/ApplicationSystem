@@ -12,12 +12,14 @@ from web_app.src.models.table import RequestItem
 # Enum для статуса заявки
 class RequestStatus(Enum):
     REGISTERED = "зарегистрирована"
+    CANCELLED = "отменена"
     CONFIRMED = "подтверждена"
     IN_PROGRESS = "в работе"
     PARTIALLY_FULFILLED = "частично выполнена"
     PLANNED = "запланирована"
     COMPLETED = "выполнена"
-    CANCELLED = "отменена"
+    ENDING_COMPLETED = "подтверждено выполнение"
+    FINISHED = "завершена"
 
 # Enum для типа заявки
 class RequestType(Enum):
@@ -36,14 +38,19 @@ class RequestAction(Enum):
     COMPLETED = "выполнена"
     CANCELLED = "отменена"
     PLANNED = "запланирована"
-
+    ENDING_COMPLETED = "выполнение подтверждено"
+    FINISHED = "завершена"
 
 STATUS_MAPPING = {
     "зарегистрирована": RequestStatus.REGISTERED,
+    "подтверждена": RequestStatus.CONFIRMED,
     "в работе": RequestStatus.IN_PROGRESS,
+    "частично выполнена": RequestStatus.PARTIALLY_FULFILLED,
+    "запланирована": RequestStatus.PLANNED,
     "выполнена": RequestStatus.COMPLETED,
-    "отменена": RequestStatus.CANCELLED,
-    "частично выполнена": RequestStatus.PARTIALLY_FULFILLED
+    "подтверждено выполнение": RequestStatus.ENDING_COMPLETED,
+    "завершена": RequestStatus.FINISHED,
+    "отменена": RequestStatus.CANCELLED
 }
 
 TYPE_MAPPING = {

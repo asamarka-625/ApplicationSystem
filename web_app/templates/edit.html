@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div id="requestEdit" style="display: none;">
+<section id="create-request">
 	<div class="section-header">
-		<h1>Редактирование заявки <span id="registrationNumber"></span></h1>
+		<h1>Редактирование заявки</h1>
 	</div>
 
 	<form id="requestForm" class="request-form">
@@ -17,45 +17,70 @@
 				</select>
 			</div>
 
-			<div class="form-group">
-                <label for="requestItem">Предмет</label>
+            <div class="form-group hidden-section" id="emergencyGroup">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="isEmergency" name="isEmergency" style="width: auto; margin-right: 0.5rem;">
+                    <span class="checkmark"></span>
+                    Аварийная заявка
+                </label>
+                <small class="checkbox-description">Отметьте, если требуется срочное решение аварийной ситуации</small>
+            </div>
+
+            <div class="form-group hidden-section" id="itemsGroup">
+                <label for="itemsContainer">Предметы</label>
                 <div class="items-container" id="itemsContainer">
+                    <div class="item-input-wrapper">
+                        <div class="item-row">
+                            <div class="item-input-col">
+                                <input type="text" class="request-item-input" name="itemId" required
+                                       placeholder="Выберите предмет" autocomplete="off">
+                                <div class="suggestions-container"></div>
+                            </div>
+                            <div class="item-quantity-col">
+                                <input type="number" class="item-quantity" name="itemQuantity"
+                                       value="1" min="1" required placeholder="Кол-во">
+                            </div>
+                            <div class="item-actions-col">
+                                <button type="button" class="btn-remove-item" style="display: none;">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <button type="button" class="btn-add-item" id="addItemBtn">
                     <i class="fas fa-plus"></i> Добавить еще предмет
                 </button>
             </div>
 
-			<div class="form-group">
+			<div class="form-group hidden-section" id="commentGroup">
 				<label for="requestDescription">Подробное описание *</label>
 				<textarea id="requestDescription" name="description" rows="5" required
 						  placeholder="Опишите подробно, что требуется сделать"></textarea>
 			</div>
 		</div>
 
-		<div class="form-section emergency-section" style="display: none;">
-			<h3><i class="fas fa-exclamation-triangle"></i> Аварийная ситуация</h3>
-			<div class="emergency-warning">
-				<p>Аварийные заявки оформляются только в отношении технического и эксплуатационного обслуживания зданий и помещений судебных участков.</p>
-			</div>
-		</div>
+		<div class="form-group hidden-section" id="attachmentsSection">
+            <h3>Дополнительная информация</h3>
+            <div class="form-group">
+                <label for="attachments">Прикрепленные файлы</label>
+                <input type="file" id="attachments" name="attachments" multiple
+                       accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.mp4,.avi,.mov,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                       data-max-files="5">
+                <small>Можно прикрепить до 5 файлов (фото, видео или документы). Файлы добавляются при каждом выборе.</small>
 
-		<div class="form-section">
-			<h3>Дополнительная информация</h3>
-			<div class="form-group">
-				<label for="attachments">Прикрепленные файлы</label>
-				<input type="file" id="attachments" name="attachments" multiple
-					   accept=".jpg,.jpeg,.png,.pdf,.doc,.docx">
-				<small>Можно прикрепить фото, видео или документы</small>
-			</div>
-		</div>
+                <!-- Добавляем контейнеры прямо в HTML -->
+                <div class="file-counter" style="margin-bottom: 10px; font-size: 0.9em; color: #666;"></div>
+                <div class="file-list" style="margin-top: 10px;"></div>
+            </div>
+        </div>
 
 		<div class="form-actions">
-			<button class="btn btn-secondary" id="reset_create">Очистить</button>
-			<button class="btn btn-primary" id="sumbit_create">
-				<i class="fas fa-paper-plane"></i> Обновить заявку
-			</button>
+			<button type="button" class="btn btn-secondary" id="reset_create">Очистить</button>
+			<button type="submit" class="btn btn-primary" id="sumbit_create">
+                <i class="fas fa-save"></i> Сохранить изменения
+            </button>
 		</div>
 	</form>
-</div>
+</section>
 {% endblock %}

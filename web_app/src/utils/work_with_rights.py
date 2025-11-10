@@ -21,5 +21,6 @@ def get_allowed_rights(current_user: User) -> Dict[str, bool]:
         "planning": current_user.is_management or current_user.is_management_department or current_user.is_executor,
         "ready": current_user.is_executor or current_user.is_executor_organization,
         "confirm_management_department": current_user.is_management_department,
-        "confirm_management": current_user.is_management
+        "confirm_management": current_user.is_management,
+        "download": current_user.is_management or current_user.is_management_department
     }

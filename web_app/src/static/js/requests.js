@@ -148,6 +148,7 @@ async function loadViewInfo() {
         const data = await response.json();
         const request_type_data = data.request_type;
 		const status_data = data.status;
+        const department_data = data.department;
 
         const select_type_filter = document.getElementById('typeFilter');
         request_type_data.forEach(request_type => {
@@ -160,10 +161,21 @@ async function loadViewInfo() {
         const select_status_filter = document.getElementById('statusFilter');
         status_data.forEach(status => {
             const option = document.createElement('option');
-            option.value = status.id
+            option.value = status.id;
             option.textContent = status.name;
             select_status_filter.appendChild(option);
         });
+
+        const select_department_filter = document.getElementById('departmentFilter');
+        department_data.forEach(department => {
+            const option = document.createElement('option');
+            option.value = department.id;
+            option.textContent = department.name;
+            select_department_filter.appendChild(option);
+        });
+
+        initializeFilterListeners();
+        await loadRequests();
 
     } catch (error) {
         console.error('Ошибка загрузки информации:', error);
@@ -171,13 +183,49 @@ async function loadViewInfo() {
     }
 }
 
+function initializeFilterListeners() {
+    const statusFilter = document.getElementById('statusFilter');
+    const typeFilter = document.getElementById('typeFilter');
+    const departmentFilter = document.getElementById('departmentFilter');
+
+    if (statusFilter) {
+        statusFilter.addEventListener('change', function() {
+            // Ваша функция здесь
+            loadRequests();
+        });
+    }
+
+    if (typeFilter) {
+        typeFilter.addEventListener('change', function() {
+            // Ваша функция здесь
+            loadRequests();
+        });
+    }
+
+    if (departmentFilter) {
+        departmentFilter.addEventListener('change', function() {
+            // Ваша функция здесь
+            loadRequests();
+        });
+    }
+}
+
 // Загрузка списка заявок
 async function loadRequests() {
     try {
-        const statusFilter = document.getElementById('statusFilter').value;
-        const typeFilter = document.getElementById('typeFilter').value;
+        const statusFilter = document.getElementById('statusFilter').value || null;
+        const typeFilter = document.getElementById('typeFilter').value || null;
+        const departmentFilter = document.getElementById('departmentFilter').value || null;
 
-        const response = await fetch(`${API_URL}/list/requests?status=${statusFilter}&request_type=${typeFilter}`);
+        // Создаем объект с параметрами
+        const params = new URLSearchParams();
+
+        if (statusFilter) params.append('status', statusFilter);
+        if (typeFilter) params.append('request_type', typeFilter);
+        if (departmentFilter) params.append('department', departmentFilter);
+
+        const url = `${API_URL}/list/requests?${params.toString()}`;
+        const response = await fetch(url);
         const data = await response.json();
 
         displayRequests(data);
@@ -193,6 +241,10 @@ function displayRequests(data) {
     tbody.innerHTML = '';
     const requests = data.requests;
     const rights = data.rights;
+
+    if (rights.download) {
+        document.getElementById("download-excel").style.display = "block";
+    }
 
     if (requests.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Заявки не найдены</td></tr>';
@@ -234,9 +286,13 @@ function displayRequests(data) {
                         <button class="btn-reject" onclick="openRejectModal(event, '${request.registration_number}')">
                             <i class="fa-solid fa-xmark"></i> Отклонить
                         </button> ` : ''}
-                    ${rights.ready && request.rights.ready ? `
+                    ${rights.confirm_management_department && request.rights.confirm_management_department ? `
                         <button class="btn-ready" onclick="ExecuteRequest(event, '${request.registration_number}')">
-                            <i class="fa-solid fa-thumbs-up"></i> Готово
+                            <i class="fa-solid fa-thumbs-up"></i> Подтвердить выполнение
+                        </button> ` : ''}
+                    ${rights.confirm_management && request.rights.confirm_management ? `
+                        <button class="btn-ready" onclick="ExecuteRequest(event, '${request.registration_number}')">
+                            <i class="fa-solid fa-thumbs-up"></i> Завершить
                         </button> ` : ''}
                 </div>
             </td>
@@ -245,33 +301,133 @@ function displayRequests(data) {
     });
 }
 
-// Экспорт в Excel
+function openExportModal() {
+    // Устанавливаем даты по умолчанию
+    const today = new Date();
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(today.getMonth() - 1);
+
+    // Форматируем даты для input type="date"
+    document.getElementById('exportDateFrom').value = formatDateForInput(oneMonthAgo);
+    document.getElementById('exportDateUntil').value = formatDateForInput(today);
+
+    // Показываем модальное окно
+    const modal = document.getElementById('exportModal');
+    modal.style.display = 'block';
+
+    // Блокируем прокрутку body
+    document.body.style.overflow = 'hidden';
+}
+
+// Функция для закрытия модального окна
+function closeExportModal() {
+    const modal = document.getElementById('exportModal');
+    modal.style.display = 'none';
+
+    // Восстанавливаем прокрутку body
+    document.body.style.overflow = 'auto';
+}
+
+// Функция для форматирования даты в формат YYYY-MM-DD
+function formatDateForInput(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// Функция для экспорта в Excel
 async function exportToExcel() {
+    const dateFrom = document.getElementById('exportDateFrom').value;
+    const dateUntil = document.getElementById('exportDateUntil').value;
+
+    // Валидация дат
+    if (!dateFrom || !dateUntil) {
+        showNotification('Пожалуйста, выберите обе даты', 'error');
+        return;
+    }
+
+    if (new Date(dateFrom) > new Date(dateUntil)) {
+        showNotification('Дата "с" не может быть больше даты "по"', 'error');
+        return;
+    }
+
+    // Получаем текущие фильтры из таблицы
+    const statusFilter = document.getElementById('statusFilter').value || null;
+    const typeFilter = document.getElementById('typeFilter').value || null;
+    const departmentFilter = document.getElementById('departmentFilter').value || null;
+
+    // Собираем параметры
+    const params = new URLSearchParams();
+    params.append('date_from', dateFrom);
+    params.append('date_until', dateUntil);
+
+    if (statusFilter) params.append('status', statusFilter);
+    if (typeFilter) params.append('request_type', typeFilter);
+    if (departmentFilter) params.append('department', departmentFilter);
+
     try {
-        const response = await fetch(`${API_URL}/dashboard/export/excel`);
-        const blob = await response.blob();
+        // Показываем индикатор загрузки
+        const downloadBtn = document.querySelector('#exportModal .btn-primary');
+        const originalText = downloadBtn.innerHTML;
+        downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загрузка...';
+        downloadBtn.disabled = true;
 
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = `заявки_${new Date().toISOString().split('T')[0]}.xlsx`;
+        // Выполняем запрос
+        const response = await fetch(`/api/v1/download/requests?${params.toString()}`, {
+            method: 'GET'
+        });
 
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        if (response.ok) {
+            // Скачиваем файл
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
 
-        showNotification('Данные экспортированы в Excel');
+            // Получаем имя файла из headers
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = `requests_${dateFrom}_${dateUntil}.xlsx`;
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                if (filenameMatch) {
+                    filename = filenameMatch[1];
+                }
+            }
+
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            // Закрываем модальное окно
+            closeExportModal();
+
+            // Показываем уведомление об успехе
+            showNotification('Файл успешно скачан', 'success');
+
+        } else {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Ошибка при загрузке файла');
+        }
+
     } catch (error) {
         console.error('Ошибка экспорта:', error);
-        showNotification('Ошибка экспорта данных', 'error');
+        showNotification(error.message || 'Ошибка при экспорте данных', 'error');
+    } finally {
+        // Восстанавливаем кнопку
+        const downloadBtn = document.querySelector('#exportModal .btn-primary');
+        if (downloadBtn) {
+            downloadBtn.innerHTML = '<i class="fas fa-download"></i> Скачать Excel';
+            downloadBtn.disabled = false;
+        }
     }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
     loadViewInfo();
-    loadRequests();
+
     const rejectModal = document.getElementById('rejectModal');
     const rejectForm = document.getElementById('rejectForm');
     const cancelReject = document.getElementById('cancelReject');
@@ -294,10 +450,30 @@ document.addEventListener('DOMContentLoaded', function() {
     cancelReject.addEventListener('click', closeRejectModal);
     closeBtn.addEventListener('click', closeRejectModal);
 
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('exportDateUntil').max = today;
+    document.getElementById('exportDateFrom').max = today;
+
     // Закрытие при клике вне модального окна
     window.addEventListener('click', function(e) {
         if (e.target === rejectModal) {
             closeRejectModal();
+        }
+    });
+
+    // Закрытие модального окна при клике вне его
+    document.addEventListener('click', function(event) {
+        const modal = document.getElementById('exportModal');
+        if (event.target === modal) {
+            closeExportModal();
+        }
+    });
+
+    // Обработчик для кнопки Enter в форме
+    document.getElementById('exportForm').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            exportToExcel();
         }
     });
 });

@@ -1,5 +1,5 @@
 # Внешние зависимости
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone
 import uuid
 import sqlalchemy as sa
@@ -12,7 +12,8 @@ from web_app.src.core import config
 from web_app.src.models import (Request, TYPE_ID_MAPPING, request_item, RequestItem, RequestHistory,
                                 RequestType, RequestDocument, RequestAction, RequestStatus, TYPE_MAPPING,
                                 STATUS_MAPPING, User, Secretary, Judge, Management, Executor, Item, UserRole,
-                                ManagementDepartment, ExecutorOrganization, RequestItemStatus)
+                                ManagementDepartment, ExecutorOrganization, RequestItemStatus,
+                                STATUS_ID_MAPPING, REQUEST_ITEM_STATUS_ID_MAPPING, REQUEST_ITEM_STATUS_MAPPING)
 from web_app.src.core import connection
 from web_app.src.schemas import (CreateRequest, RequestResponse, RequestDetailResponse,
                                  RequestHistoryResponse, RequestDataResponse, RightsResponse,
@@ -20,6 +21,7 @@ from web_app.src.schemas import (CreateRequest, RequestResponse, RequestDetailRe
                                  ItemsNameRequestFull, RedirectRequestWithDeadline, RequestExecutorResponse,
                                  PlanningRequest, ActualStatusRequest, ACTUAL_STATUS_MAPPING_FOR_REQUEST_STATUS,
                                  ACTUAL_STATUS_MAPPING_FOR_REQUEST_ITEM_STATUS)
+from web_app.src.utils import delete_files
 
 
 # Вспомогательная функция для получения прав для взаимодействия с предметом
@@ -47,7 +49,7 @@ def get_overdue_request_for_management(
 ) -> bool:
     
     if (role not in (UserRole.MANAGEMENT, UserRole.MANAGEMENT_DEPARTMENT) or
-        request.status is RequestStatus.COMPLETED):
+        request.status == RequestStatus.COMPLETED):
         return False
         
     now = datetime.now(timezone.utc)
@@ -97,8 +99,11 @@ async def sql_create_request(
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid request")
 
         elif request_type == RequestType.TECHNICAL:
-            if not (data.items is None and len(data.description) > 0):
+            if not (data.items and len(data.description) > 0):
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid request")
+
+        else:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid request type")
 
         new_request = Request(
             registration_number=str(uuid.uuid4()),
@@ -160,8 +165,9 @@ async def sql_create_request(
 async def sql_get_requests_by_user(
         session: AsyncSession,
         user: User,
-        status_filter: str = "all",
-        type_filter: str = "all",
+        status_filter_id: Optional[int] =  None,
+        type_filter_id: Optional[int] =  None,
+        department_filter_id: Optional[int] = None
 ) -> List[RequestResponse]:
     try:
         query = (
@@ -191,11 +197,27 @@ async def sql_get_requests_by_user(
         else:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
-        if status_filter and status_filter != "all" and STATUS_MAPPING.get(status_filter):
-            query = query.where(Request.status == STATUS_MAPPING[status_filter])
+        if isinstance(status_filter_id, int):
+            status_filter = next(
+                (status_["name"].lower() for status_ in STATUS_ID_MAPPING if status_["id"] == status_filter_id),
+                None
+            )
+            if STATUS_MAPPING.get(status_filter):
+                query = query.where(Request.status == STATUS_MAPPING[status_filter])
 
-        if type_filter and type_filter != "all" and TYPE_MAPPING.get(type_filter):
-            query = query.where(Request.request_type == TYPE_MAPPING[type_filter])
+        else:
+            query = query.where(Request.status == RequestStatus.REGISTERED)
+
+        if isinstance(type_filter_id, int):
+            type_filter = next(
+                (type_["name"].lower() for type_ in TYPE_ID_MAPPING if type_["id"] == type_filter_id),
+                None
+            )
+            if TYPE_MAPPING.get(type_filter):
+                query = query.where(Request.request_type == TYPE_MAPPING[type_filter])
+
+        if isinstance(department_filter_id, int):
+            query = query.where(Request.department_id == department_filter_id)
 
         requests_result = await session.execute(query)
         requests = requests_result.scalars()
@@ -218,19 +240,17 @@ async def sql_get_requests_by_user(
                     edit=request.status == RequestStatus.REGISTERED,
                     approve=request.status == RequestStatus.REGISTERED,
                     reject_before=request.status == RequestStatus.REGISTERED,
-                    reject_after=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED),
-                    redirect_management_department=request.status not in (RequestStatus.COMPLETED,
-                                                                          RequestStatus.CANCELLED),
-                    redirect_executor=request.status not in (RequestStatus.COMPLETED,
-                                                             RequestStatus.CANCELLED),
-                    redirect_org=request.status not in (RequestStatus.COMPLETED,
+                    reject_after=request.status not in (RequestStatus.FINISHED,
                                                         RequestStatus.CANCELLED),
-                    deadline=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED),
-                    planning=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED),
-                    ready=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED),
-                    confirm_management_department=request.status not in (RequestStatus.COMPLETED,
-                                                                         RequestStatus.CANCELLED),
-                    confirm_management=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED)
+                    redirect_management_department=request.status not in (RequestStatus.CANCELLED,
+                                                                          RequestStatus.FINISHED),
+                    redirect_executor=request.status not in (RequestStatus.FINISHED, RequestStatus.CANCELLED),
+                    redirect_org=request.status not in (RequestStatus.FINISHED, RequestStatus.CANCELLED),
+                    deadline=request.status not in (RequestStatus.FINISHED, RequestStatus.CANCELLED),
+                    planning=request.status not in (RequestStatus.FINISHED, RequestStatus.CANCELLED),
+                    ready=request.status not in (RequestStatus.FINISHED, RequestStatus.CANCELLED),
+                    confirm_management_department=request.status == RequestStatus.COMPLETED,
+                    confirm_management=request.status == RequestStatus.ENDING_COMPLETED
                 ),
                 actual_status=(ActualStatusRequest.OVERDUE if get_overdue_request_for_management(user.role, request)
                                else ACTUAL_STATUS_MAPPING_FOR_REQUEST_STATUS[request.status])
@@ -253,10 +273,11 @@ async def sql_get_requests_by_user(
 # Выводим список заявок для исполнителя (организации)
 @connection
 async def sql_get_requests_for_executor(
-        session: AsyncSession,
-        user: User,
-        status_filter: str = "all",
-        type_filter: str = "all"
+    session: AsyncSession,
+    user: User,
+    status_filter_id: Optional[int] = None,
+    type_filter_id: Optional[int] = None,
+    department_filter_id: Optional[int] = None
 ) -> List[RequestExecutorResponse]:
     try:
         query = (
@@ -269,35 +290,56 @@ async def sql_get_requests_for_executor(
         conditions = []
 
         if user.is_executor:
-            conditions.append(
-                Request.id.in_(
-                    sa.select(RequestItem.request_id).where(
-                        RequestItem.executor_id == user.executor_profile.id,
-                        RequestItem.status != RequestItemStatus.PLANNED
-                    )
-                )
-            )
+            request_item_conditions = [
+                RequestItem.executor_id == user.executor_profile.id
+            ]
             validate_association = lambda a, u: a.executor_id == u.executor_profile.id
 
         elif user.is_executor_organization:
-            conditions.append(
-                Request.id.in_(
-                    sa.select(RequestItem.request_id).where(
-                        RequestItem.executor_organization_id == user.executor_organization_profile.id,
-                        RequestItem.status != RequestItemStatus.PLANNED
-                    )
-                )
-            )
+            request_item_conditions = [
+                RequestItem.executor_organization_id == user.executor_organization_profile.id
+            ]
             validate_association = lambda a, u: a.executor_organization_id == u.executor_organization_profile.id
 
         else:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
-        if status_filter and status_filter != "all" and STATUS_MAPPING.get(status_filter):
-            conditions.append(Request.status == STATUS_MAPPING[status_filter])
+        if isinstance(status_filter_id, int):
+            status_filter = next(
+                (status_["name"].lower() for status_ in REQUEST_ITEM_STATUS_ID_MAPPING \
+                 if status_["id"] == status_filter_id),
+                None
+            )
+            if REQUEST_ITEM_STATUS_MAPPING.get(status_filter):
+                request_item_conditions.append(
+                    RequestItem.status == REQUEST_ITEM_STATUS_MAPPING[status_filter]
+                )
+                validate_status = lambda s: s == REQUEST_ITEM_STATUS_MAPPING[status_filter]
 
-        if type_filter and type_filter != "all" and TYPE_MAPPING.get(type_filter):
-            conditions.append(Request.request_type == TYPE_MAPPING[type_filter])
+        else:
+            request_item_conditions.append(
+                RequestItem.status != RequestItemStatus.PLANNED
+            )
+            validate_status = lambda s: s != RequestItemStatus.PLANNED
+
+        conditions.append(
+            Request.id.in_(
+                sa.select(RequestItem.request_id).where(
+                    sa.and_(*request_item_conditions)
+                )
+            )
+        )
+
+        if isinstance(type_filter_id, int):
+            type_filter = next(
+                (type_["name"].lower() for type_ in TYPE_ID_MAPPING if type_["id"] == type_filter_id),
+                None
+            )
+            if TYPE_MAPPING.get(type_filter):
+                conditions.append(Request.request_type == TYPE_MAPPING[type_filter])
+
+        if isinstance(department_filter_id, int):
+            conditions.append(Request.department_id == department_filter_id)
 
         query = query.where(sa.and_(*conditions))
 
@@ -344,7 +386,7 @@ async def sql_get_requests_for_executor(
             )
             for request in requests
             for association in request.item_associations
-            if validate_association(association, user) and association.status != RequestItemStatus.PLANNED
+            if validate_association(association, user) and validate_status(association.status)
         ]
 
     except SQLAlchemyError as e:
@@ -362,10 +404,9 @@ async def sql_get_requests_for_executor(
 # Выводим список запланированных заявок для пользователя
 @connection
 async def sql_get_planning_requests(
-        session: AsyncSession,
-        user: User,
-        status_filter: str = "all",
-        type_filter: str = "all"
+    session: AsyncSession,
+    user: User,
+    department_filter_id: Optional[int] = None
 ) -> List[RequestExecutorResponse]:
     try:
         query = (
@@ -374,6 +415,9 @@ async def sql_get_planning_requests(
                 so.selectinload(Request.item_associations).joinedload(RequestItem.item)
             )
         )
+
+        if isinstance(department_filter_id, int):
+            query = query.where(Request.department_id == department_filter_id)
 
         conditions = []
 
@@ -423,12 +467,6 @@ async def sql_get_planning_requests(
 
         else:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
-
-        if status_filter and status_filter != "all" and STATUS_MAPPING.get(status_filter):
-            conditions.append(Request.status == STATUS_MAPPING[status_filter])
-
-        if type_filter and type_filter != "all" and TYPE_MAPPING.get(type_filter):
-            conditions.append(Request.request_type == TYPE_MAPPING[type_filter])
 
         query = query.where(sa.and_(*conditions))
 
@@ -623,9 +661,8 @@ async def sql_get_request_details(
                 deadline=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED),
                 planning=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED),
                 ready=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED),
-                confirm_management_department=request.status not in (RequestStatus.COMPLETED,
-                                                                     RequestStatus.CANCELLED),
-                confirm_management=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED)
+                confirm_management_department=False,
+                confirm_management=False
             )
         )
 
@@ -738,12 +775,14 @@ async def sql_edit_request(
             list_update.append(f"Изменено описание: {request.description} -> {data.description}")
             request.description = data.description
 
+        items_ids = tuple(item.id for item in data.items)
+
         # Удаляем записи и возвращаем удаленные данные
         delete_result = await session.execute(
             sa.delete(request_item).where(
                 sa.and_(
                     request_item.c.request_id == request.id,
-                    request_item.c.item_id.notin_(data.items)
+                    request_item.c.item_id.notin_(items_ids)
                 )
             ).returning(request_item.c.item_id)
         )
@@ -751,25 +790,64 @@ async def sql_edit_request(
         # Получаем удаленные item_id
         deleted_item_ids = [row[0] for row in delete_result]
 
-        # Находим все записи для данной заявки
-        existing_items = await session.execute(
-            sa.select(request_item.c.item_id).where(
+        # Находим все существующие записи для данной заявки
+        existing_items_result = await session.execute(
+            sa.select(request_item.c.item_id, request_item.c.count).where(
                 sa.and_(
                     request_item.c.request_id == request.id,
-                    request_item.c.item_id.in_(data.items)
+                    request_item.c.item_id.in_(items_ids)
                 )
             )
         )
-        existing_item_ids = {row.item_id for row in existing_items}
+        existing_items = {row.item_id: row.count for row in existing_items_result}
 
-        new_items = [
-            {"request_id": request.id, "item_id": item_id}
-            for item_id in data.items
-            if item_id not in existing_item_ids
-        ]
+        items_to_update = []
+        new_items = []
+        items_to_process = []
 
-        inserted_item_ids = set()
+        for item_data in data.items:
+            item_id = item_data.id
+            new_quantity = item_data.quantity
+
+            if item_id in existing_items:
+                # Если количество изменилось - добавляем в обновление
+                if existing_items[item_id] != new_quantity:
+                    items_to_update.append({
+                        "request_id": request.id,
+                        "item_id": item_id,
+                        "count": new_quantity
+                    })
+                    items_to_process.append(item_id)
+            else:
+                # Если записи нет - добавляем новую
+                new_items.append({
+                    "request_id": request.id,
+                    "item_id": item_id,
+                    "count": new_quantity
+                })
+                items_to_process.append(item_id)
+
+        # Обновляем существующие записи с новым количеством
+        updated_item_ids = set()
+        if items_to_update:
+            # Создаем CASE выражение для массового обновления
+            case_stmt = sa.case(
+                *[(request_item.c.item_id == item["item_id"], item["count"]) for item in items_to_update],
+                else_=request_item.c.count
+            )
+
+            update_stmt = sa.update(request_item).where(
+                sa.and_(
+                    request_item.c.request_id == request.id,
+                    request_item.c.item_id.in_([item["item_id"] for item in items_to_update])
+                )
+            ).values(count=case_stmt)
+
+            update_result = await session.execute(update_stmt.returning(request_item.c.item_id))
+            updated_item_ids = {row[0] for row in update_result}
+
         # Добавляем новые записи
+        inserted_item_ids = set()
         if new_items:
             insert_result = await session.execute(
                 request_item.insert().returning(request_item.c.item_id),
@@ -777,32 +855,60 @@ async def sql_edit_request(
             )
             inserted_item_ids = {row[0] for row in insert_result}
 
-        all_changed_ids = inserted_item_ids.union(deleted_item_ids)
+        # Собираем все измененные ID для получения информации о предметах
+        all_changed_ids = inserted_item_ids.union(updated_item_ids).union(deleted_item_ids)
 
         if all_changed_ids:
             update_items_result = await session.execute(
                 sa.select(Item.id, Item.name, Item.description)
-                .where(
-                    Item.id.in_(all_changed_ids)
-                )
+                .where(Item.id.in_(all_changed_ids))
             )
-
             update_items = update_items_result.all()
 
             del_info = []
             add_info = []
-            for item in update_items:
-                if item[0] in deleted_item_ids:
-                    del_info.append(f"Удален предмет: {item[1]} {item[2]}")
+            update_info = []
 
-                if item[0] in inserted_item_ids:
-                    add_info.append(f"Добавлен предмет: {item[1]} {item[2]}")
+            # Создаем словарь для быстрого доступа к данным о количестве
+            quantity_map = {item.id: item.quantity for item in data.items}
+            existing_quantity_map = existing_items
+
+            for item in update_items:
+                item_id, item_name, item_description = item
+
+                if item_id in deleted_item_ids:
+                    del_info.append(f"Удален предмет: {item_name} {item_description or ''}")
+
+                if item_id in inserted_item_ids:
+                    quantity = quantity_map.get(item_id, 1)
+                    add_info.append(f"Добавлен предмет: {item_name} {item_description or ''} (количество: {quantity})")
+
+                if item_id in updated_item_ids:
+                    old_quantity = existing_quantity_map.get(item_id, 1)
+                    new_quantity = quantity_map.get(item_id, 1)
+                    update_info.append(
+                        f"Обновлен предмет: {item_name} {item_description or ''} (количество: {old_quantity} → {new_quantity})")
 
             if del_info:
                 list_update.append("\n".join(del_info))
 
             if add_info:
                 list_update.append("\n".join(add_info))
+
+            if update_info:
+                list_update.append("\n".join(update_info))
+
+        if data.attachments:
+            for attachment in data.attachments:
+                list_update.append(f"Прикреплен файл: {attachment.file_name}")
+                new_document = RequestDocument(
+                    document_type=attachment.content_type,
+                    file_path=attachment.file_path,
+                    file_name=attachment.file_name,
+                    size=attachment.size,
+                    request_id=request.id
+                )
+                session.add(new_document)
 
         new_history = RequestHistory(
             action=RequestAction.UPDATE,
@@ -1286,4 +1392,239 @@ async def sql_planning_request(
 
     except Exception as e:
         config.logger.error(f"Unexpected error planning request: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
+
+
+# Завершение заявки
+@connection
+async def sql_finish_request(
+        registration_number: str,
+        user: User,
+        session: AsyncSession
+) -> None:
+    try:
+        request_result = await session.execute(
+            sa.select(Request)
+            .where(
+                Request.registration_number == registration_number,
+            )
+        )
+
+        request = request_result.scalar_one()
+
+        if user.is_management_department and request.status == RequestStatus.COMPLETED:
+            action = RequestAction.ENDING_COMPLETED
+            description = "Выполнение заявки подтверждено"
+            request.status = RequestStatus.ENDING_COMPLETED
+
+        elif user.is_management and request.status == RequestStatus.ENDING_COMPLETED:
+            action = RequestAction.FINISHED
+            description = "Заявка завершена"
+            request.status = RequestStatus.FINISHED
+
+        else:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
+
+        new_history = RequestHistory(
+            action=action,
+            request_id=request.id,
+            user_id=user.id,
+            description=description
+        )
+        session.add(new_history)
+
+        await session.commit()
+
+    except NoResultFound:
+        config.logger.info(f"Request not found by registration_number: {registration_number}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found")
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error finish request: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error finish request: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
+
+
+# Завершение заявки
+@connection
+async def sql_delete_attachment(
+    registration_number: str,
+    filename: str,
+    user: User,
+    session: AsyncSession
+) -> None:
+    try:
+        request_result = await session.execute(
+            sa.select(Request)
+            .where(
+                Request.registration_number == registration_number,
+            )
+            .options(
+                so.selectinload(Request.related_documents)
+            )
+        )
+        request = request_result.scalar_one()
+
+        if user.is_secretary and not request.secretary_id == user.secretary_profile.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
+
+        elif user.is_judge and not request.judge_id == user.judge_profile.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
+
+        file = next((f for f in request.related_documents if f.file_name == filename), None)
+
+        if file is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+
+        delete_files(file_paths=[file.file_path])
+        await session.delete(file)
+
+        new_history = RequestHistory(
+            action=RequestAction.UPDATE,
+            request_id=request.id,
+            user_id=user.id,
+            description=f"Удален прикрепленный файл: {filename}"
+        )
+        session.add(new_history)
+
+        await session.commit()
+
+    except NoResultFound:
+        config.logger.info(f"Request not found by registration_number: {registration_number}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found")
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error delete file: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error delete file: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
+
+
+# Выводим список заявок для скачивания
+@connection
+async def sql_get_requests_for_download(
+        session: AsyncSession,
+        status_filter_id: int,
+        type_filter_id: Optional[int] = None,
+        department_filter_id: Optional[int] = None,
+        date_filter_from: Optional[datetime] = None,
+        date_filter_until: Optional[datetime] = None
+) -> List[Dict[str, Any]]:
+    try:
+        query = (
+            sa.select(Request)
+            .options(
+                so.selectinload(Request.item_associations).joinedload(RequestItem.item)
+            )
+        )
+
+        status_filter = next(
+            (status_["name"].lower() for status_ in STATUS_ID_MAPPING if status_["id"] == status_filter_id),
+            None
+        )
+        if STATUS_MAPPING.get(status_filter):
+            query = query.where(Request.status == STATUS_MAPPING[status_filter])
+
+        else:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Status not found")
+
+        if isinstance(type_filter_id, int):
+            type_filter = next(
+                (type_["name"].lower() for type_ in TYPE_ID_MAPPING if type_["id"] == type_filter_id),
+                None
+            )
+            if TYPE_MAPPING.get(type_filter):
+                query = query.where(Request.request_type == TYPE_MAPPING[type_filter])
+
+        if isinstance(department_filter_id, int):
+            query = query.where(Request.department_id == department_filter_id)
+
+        if date_filter_from:
+            query = query.where(Request.created_at >= date_filter_from)
+
+        if date_filter_until:
+            query = query.where(Request.created_at <= date_filter_until)
+
+        requests_result = await session.execute(query)
+        requests = requests_result.scalars()
+
+        return [
+            {
+                "Индентификатор": request.id,
+                "Номер": request.registration_number,
+                "Предметы": "\n".join(f"{association.item.name} ({association.count}шт.)" \
+                                      for association in request.item_associations),
+                "Тип": request.request_type.value,
+                "Статус": request.status.value,
+                "Аварийность": "Да" if request.is_emergency else "Нет",
+                "Создана": request.created_at.strftime("%d.%m.%Y %H:%M")
+            }
+            for request in requests
+        ]
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error view requests for download: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error view requests for download: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
+
+
+# Выводим список заявок из планирования для скачивания
+@connection
+async def sql_get_planning_for_download(
+    session: AsyncSession,
+    department_filter_id: Optional[int] = None
+) -> List[Dict[str, Any]]:
+    try:
+        query = (
+            sa.select(RequestItem)
+            .where(
+                RequestItem.status == RequestItemStatus.PLANNED
+            ).options(
+                so.joinedload(RequestItem.item),
+                so.joinedload(RequestItem.request)
+            )
+        )
+
+        if isinstance(department_filter_id, int):
+            query = query.where(RequestItem.request.department_id == department_filter_id)
+
+        request_items_result = await session.execute(query)
+        request_items = request_items_result.scalars()
+
+        return [
+            {
+                "Номер заявки": request_item.request.registration_number,
+                "Предмет": request_item.item.name,
+                "Количество": request_item.count,
+                "Сроки": request_item.deadline_planning.strftime("%d.%m.%Y %H:%M")
+            }
+            for request_item in request_items
+        ]
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error view planning for download: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error view planning for download: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")

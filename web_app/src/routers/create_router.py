@@ -12,6 +12,7 @@ from web_app.src.models import TYPE_ID_MAPPING, User, UserRole
 from web_app.src.schemas import CreateRequest, ItemsRequest
 from web_app.src.dependencies import get_current_user, get_current_user_with_role
 from web_app.src.utils import save_uploaded_files, delete_files
+from web_app.src.core import config
 
 
 router = APIRouter(
@@ -112,27 +113,33 @@ async def get_organizations(
     summary="Создание новой заявки"
 )
 async def create_request(
-        items: Optional[str] = Form(None),
-        is_emergency: bool = Form(False),
-        description: str = Form(...),
-        request_type: int = Form(...),
-        attachments: Optional[List[UploadFile]] = File(None),
-        current_user: User = Depends(
-            get_current_user_with_role((UserRole.SECRETARY,))
-        )
+    items: str = Form(None),
+    is_emergency: bool = Form(False),
+    description: str = Form(...),
+    request_type: int = Form(...),
+    attachments: Optional[List[UploadFile]] = File(None),
+    current_user: User = Depends(
+        get_current_user_with_role((UserRole.SECRETARY,))
+    )
 ):
     if not current_user.is_secretary:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
-    items_list = None
+    items_list = []
     if items and items != "null":
         try:
             items_data = json.loads(items)
             if items_data:  # Проверяем что не пустой массив
-                items_list = [ItemsRequest(**item) for item in items_data]
+                items_list.extend([ItemsRequest(**item) for item in items_data])
 
         except json.JSONDecodeError:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid items JSON")
+
+    if not items_list:
+        items_list.append(ItemsRequest(
+            id=config.MAINTENANCE_ITEM_ID,
+            quantity=1
+        ))
 
     request_data = CreateRequest(
         items=items_list,
@@ -154,7 +161,7 @@ async def create_request(
         )
 
     except:
-        delete_files(files_info)
+        delete_files(file_paths=[file.file_path for file in files_info])
         raise
 
     return {"status": "success", "registration_number": request_id}
