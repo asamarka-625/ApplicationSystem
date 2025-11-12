@@ -31,6 +31,7 @@ async def get_filter_info(
     status: bool = True,
     for_planning: bool = False,
     current_department: Optional[int] = None,
+    current_type: Optional[int] = None,
     current_user: User = Depends(get_current_user_with_role(tuple(UserRole)))
 ):
     result = {}
@@ -49,7 +50,8 @@ async def get_filter_info(
     if status:
         result["status"] = await sql_get_count_requests_by_user(
             user=current_user,
-            current_department=current_department
+            current_department=current_department,
+            current_type=current_type
         )
 
     return result

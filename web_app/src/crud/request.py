@@ -1652,6 +1652,7 @@ async def sql_get_planning_for_download(
 async def sql_get_count_requests_by_user(
     user: User,
     current_department: Optional[int],
+    current_type: Optional[int],
     session: AsyncSession
 ) -> List[Dict[str, Any]]:
     try:
@@ -1707,6 +1708,14 @@ async def sql_get_count_requests_by_user(
 
         if current_department is not None:
             query = query.where(Request.department_id == current_department)
+
+        if current_type is not None:
+            type_name = next(
+                (type_["name"].lower() for type_ in TYPE_ID_MAPPING if type_["id"] == current_type),
+                None
+            )
+            if type_name is not None:
+                query = query.where(Request.request_type == TYPE_MAPPING[type_name])
 
         requests_status_result = await session.execute(query)
         requests_status = requests_status_result.all()

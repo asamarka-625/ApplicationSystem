@@ -7,6 +7,7 @@ let totalItems = 0;
 let totalPages = 0;
 
 let current_department = null;
+let current_type = null;
 
 async function ExecuteRequest(e, id, item_id) {
     try {
@@ -50,6 +51,7 @@ async function loadViewInfo() {
     try {
         const params = new URLSearchParams();
         if (current_department) params.append('current_department', current_department);
+        if (current_type) params.append('current_type', current_type);
 
         const response = await fetch(`${API_URL}/filter/info?${params.toString()}`);
         const data = await response.json();
@@ -58,6 +60,7 @@ async function loadViewInfo() {
         const department_data = data.department;
 
         const select_type_filter = document.getElementById('typeFilter');
+        select_type_filter.innerHTML = '<option value="">Все типы</option>';
         request_type_data.forEach(request_type => {
             const option = document.createElement('option');
             option.value = request_type.id;
@@ -66,6 +69,7 @@ async function loadViewInfo() {
         });
 
         const select_status_filter = document.getElementById('statusFilter');
+        select_status_filter.innerHTML = '';
         status_data.forEach(status => {
             const option = document.createElement('option');
             option.value = status.id;
@@ -75,6 +79,7 @@ async function loadViewInfo() {
         });
 
         const select_department_filter = document.getElementById('departmentFilter');
+        select_department_filter.innerHTML = '<option value="">Все участки</option>';
         department_data.forEach(department => {
             const option = document.createElement('option');
             option.value = department.id;
@@ -82,8 +87,13 @@ async function loadViewInfo() {
             select_department_filter.appendChild(option);
         });
 
-        if (current_department != null) {
-            select_department_filter.value = current_department;
+        if (current_department != null || current_type != null) {
+            if (current_department != null) {
+                select_department_filter.value = current_department;
+            }
+            if (current_type != null) {
+                select_status_filter.value = current_type;
+            }
         } else {
             initializeFilterListeners();
         }
@@ -109,9 +119,11 @@ function initializeFilterListeners() {
     }
 
     if (typeFilter) {
-        typeFilter.addEventListener('change', function() {
+        typeFilter.addEventListener('change', function(event) {
+            const selectedOption = this.options[this.selectedIndex];
+            current_type = selectedOption.value;
             currentPage = 1;
-            loadRequests(1);
+            loadViewInfo();
         });
     }
 

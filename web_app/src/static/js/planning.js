@@ -51,6 +51,7 @@ async function loadViewInfo() {
         const department_data = data.department;
 
         const select_department_filter = document.getElementById('departmentFilter');
+        select_department_filter.innerHTML = '<option value="">Все участки</option>';
         department_data.forEach(department => {
             const option = document.createElement('option');
             option.value = department.id;
