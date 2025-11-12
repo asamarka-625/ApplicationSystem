@@ -51,7 +51,7 @@ def get_overdue_request_for_management(
 ) -> bool:
     
     if (role not in (UserRole.MANAGEMENT, UserRole.MANAGEMENT_DEPARTMENT) or
-        request.status == RequestStatus.COMPLETED):
+        request.status == RequestStatus.FINISHED):
         return False
         
     now = datetime.now(timezone.utc)
