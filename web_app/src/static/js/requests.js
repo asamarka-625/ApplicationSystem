@@ -182,8 +182,8 @@ async function loadViewInfo() {
             select_status_filter.appendChild(option);
         });
 
+        const select_department_filter = document.getElementById('departmentFilter');
         if (department_data) {
-            const select_department_filter = document.getElementById('departmentFilter');
             select_department_filter.innerHTML = '<option value="">Все участки</option>';
             department_data.forEach(department => {
                 const option = document.createElement('option');
