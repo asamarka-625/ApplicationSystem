@@ -4,6 +4,13 @@ const API_BASE_URL = '/api/v1/request';
 let currentRejectId = null;
 let currentEvent = null;
 
+let currentPage = 1;
+let pageSize = 10;
+let totalItems = 0;
+let totalPages = 0;
+
+let current_department = null;
+
 // Функция для открытия модального окна отклонения
 function openRejectModal(e, id) {
     currentRejectId = id;
@@ -144,13 +151,17 @@ async function RejectRequest(reason) {
 
 async function loadViewInfo() {
     try {
-        const response = await fetch(`${API_URL}/filter/info`);
+        const params = new URLSearchParams();
+        if (current_department) params.append('current_department', current_department);
+
+        const response = await fetch(`${API_URL}/filter/info?${params.toString()}`);
         const data = await response.json();
         const request_type_data = data.request_type;
 		const status_data = data.status;
         const department_data = data.department;
 
         const select_type_filter = document.getElementById('typeFilter');
+        select_type_filter.innerHTML = '';
         request_type_data.forEach(request_type => {
             const option = document.createElement('option');
             option.value = request_type.id;
@@ -159,14 +170,17 @@ async function loadViewInfo() {
         });
 
         const select_status_filter = document.getElementById('statusFilter');
+        select_status_filter.innerHTML = '<option value="">Все типы</option>';
         status_data.forEach(status => {
             const option = document.createElement('option');
             option.value = status.id;
-            option.textContent = status.name;
+            option.innerHTML = `<span>${status.name}</span> (<span>${status.count}<span>)`;
+            option.dataset.count = status.count;
             select_status_filter.appendChild(option);
         });
 
         const select_department_filter = document.getElementById('departmentFilter');
+        select_department_filter.innerHTML = '<option value="">Все участки</option>';
         department_data.forEach(department => {
             const option = document.createElement('option');
             option.value = department.id;
@@ -174,8 +188,12 @@ async function loadViewInfo() {
             select_department_filter.appendChild(option);
         });
 
-        initializeFilterListeners();
-        await loadRequests();
+        if (current_department != null) {
+            select_department_filter.value = current_department;
+        } else {
+            initializeFilterListeners();
+        }
+        await loadRequests(1);
 
     } catch (error) {
         console.error('Ошибка загрузки информации:', error);
@@ -189,30 +207,37 @@ function initializeFilterListeners() {
     const departmentFilter = document.getElementById('departmentFilter');
 
     if (statusFilter) {
-        statusFilter.addEventListener('change', function() {
-            // Ваша функция здесь
-            loadRequests();
+        statusFilter.addEventListener('change', function(event) {
+            const selectedOption = this.options[this.selectedIndex];
+            totalItems = Number(selectedOption.dataset.count);
+            totalPages = Math.ceil(totalItems / pageSize);
+            currentPage = 1;
+            loadRequests(1);
         });
     }
 
     if (typeFilter) {
         typeFilter.addEventListener('change', function() {
-            // Ваша функция здесь
-            loadRequests();
+            currentPage = 1;
+            loadRequests(1);
         });
     }
 
     if (departmentFilter) {
-        departmentFilter.addEventListener('change', function() {
-            // Ваша функция здесь
-            loadRequests();
+        departmentFilter.addEventListener('change', function(event) {
+            const selectedOption = this.options[this.selectedIndex];
+            current_department = selectedOption.value;
+            currentPage = 1;
+            loadViewInfo();
         });
     }
 }
 
 // Загрузка списка заявок
-async function loadRequests() {
+async function loadRequests(page = 1) {
     try {
+        currentPage = page;
+
         const statusFilter = document.getElementById('statusFilter').value || null;
         const typeFilter = document.getElementById('typeFilter').value || null;
         const departmentFilter = document.getElementById('departmentFilter').value || null;
@@ -224,11 +249,15 @@ async function loadRequests() {
         if (typeFilter) params.append('request_type', typeFilter);
         if (departmentFilter) params.append('department', departmentFilter);
 
+        params.append('page', currentPage);
+        params.append('page_size', pageSize);
+
         const url = `${API_URL}/list/requests?${params.toString()}`;
         const response = await fetch(url);
         const data = await response.json();
 
         displayRequests(data);
+        updatePagination(currentPage);
     } catch (error) {
         console.error('Ошибка загрузки заявок:', error);
         showNotification('Ошибка загрузки заявок', 'error');
@@ -425,8 +454,57 @@ async function exportToExcel() {
     }
 }
 
+function updatePagination(page = 1) {
+    currentPage = page;
+
+    // Обновляем информацию о пагинации
+    const startItem = (currentPage - 1) * pageSize + 1;
+    const endItem = Math.min(currentPage * pageSize, totalItems);
+    document.getElementById('paginationInfo').textContent =
+        `Показано ${startItem}-${endItem} из ${totalItems} заявок`;
+
+    // Обновляем кнопки навигации
+    document.getElementById('firstPage').disabled = currentPage === 1;
+    document.getElementById('prevPage').disabled = currentPage === 1;
+    document.getElementById('nextPage').disabled = currentPage === totalPages || totalPages === 0;
+    document.getElementById('lastPage').disabled = currentPage === totalPages || totalPages === 0;
+
+    // Создаем номера страниц
+    const paginationNumbers = document.getElementById('paginationNumbers');
+    paginationNumbers.innerHTML = '';
+
+    // Логика отображения номеров страниц (показываем 5 страниц)
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+
+    // Корректируем если мы в конце
+    if (endPage - startPage < 4) {
+        startPage = Math.max(1, endPage - 4);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        const pageBtn = document.createElement('button');
+        pageBtn.className = `page-number ${i === currentPage ? 'active' : ''}`;
+        pageBtn.textContent = i;
+        pageBtn.onclick = () => loadRequests(i);
+        paginationNumbers.appendChild(pageBtn);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     loadViewInfo();
+
+    document.getElementById('firstPage').addEventListener('click', () => loadRequests(1));
+    document.getElementById('prevPage').addEventListener('click', () => loadRequests(currentPage - 1));
+    document.getElementById('nextPage').addEventListener('click', () => loadRequests(currentPage + 1));
+    document.getElementById('lastPage').addEventListener('click', () => loadRequests(totalPages));
+
+    // Обработчик изменения размера страницы
+    document.getElementById('pageSize').addEventListener('change', function(e) {
+        pageSize = parseInt(e.target.value);
+        currentPage = 1; // Сбрасываем на первую страницу
+        loadRequests(currentPage);
+    });
 
     const rejectModal = document.getElementById('rejectModal');
     const rejectForm = document.getElementById('rejectForm');

@@ -1,5 +1,6 @@
 # Внешние зависимости
 from typing import List, Optional, Dict, Any
+from collections import defaultdict
 from datetime import datetime, timezone
 import uuid
 import sqlalchemy as sa
@@ -22,6 +23,7 @@ from web_app.src.schemas import (CreateRequest, RequestResponse, RequestDetailRe
                                  PlanningRequest, ActualStatusRequest, ACTUAL_STATUS_MAPPING_FOR_REQUEST_STATUS,
                                  ACTUAL_STATUS_MAPPING_FOR_REQUEST_ITEM_STATUS)
 from web_app.src.utils import delete_files
+from web_app.src.crud.departament import sql_get_all_department
 
 
 # Вспомогательная функция для получения прав для взаимодействия с предметом
@@ -167,12 +169,14 @@ async def sql_get_requests_by_user(
         user: User,
         status_filter_id: Optional[int] =  None,
         type_filter_id: Optional[int] =  None,
-        department_filter_id: Optional[int] = None
+        department_filter_id: Optional[int] = None,
+        page: int = 1,
+        page_size: int = 10
 ) -> List[RequestResponse]:
     try:
         query = (
             sa.select(Request)
-        )
+        ).offset((page - 1) * page_size).limit(page_size).order_by(Request.created_at)
 
         if user.is_secretary:
             query = query.where(Request.secretary_id == user.secretary_profile.id)
@@ -277,14 +281,16 @@ async def sql_get_requests_for_executor(
     user: User,
     status_filter_id: Optional[int] = None,
     type_filter_id: Optional[int] = None,
-    department_filter_id: Optional[int] = None
+    department_filter_id: Optional[int] = None,
+    page: int = 1,
+    page_size: int = 10
 ) -> List[RequestExecutorResponse]:
     try:
         query = (
             sa.select(Request)
             .options(
                 so.selectinload(Request.item_associations).joinedload(RequestItem.item)
-            )
+            ).offset((page - 1) * page_size).limit(page_size).order_by(Request.created_at)
         )
 
         conditions = []
@@ -406,14 +412,16 @@ async def sql_get_requests_for_executor(
 async def sql_get_planning_requests(
     session: AsyncSession,
     user: User,
-    department_filter_id: Optional[int] = None
+    department_filter_id: Optional[int] = None,
+    page: int = 1,
+    page_size: int = 10
 ) -> List[RequestExecutorResponse]:
     try:
         query = (
             sa.select(Request)
             .options(
                 so.selectinload(Request.item_associations).joinedload(RequestItem.item)
-            )
+            ).offset((page - 1) * page_size).limit(page_size).order_by(Request.created_at)
         )
 
         if isinstance(department_filter_id, int):
@@ -568,7 +576,8 @@ async def sql_get_request_details(
             )
             items.append(ItemsNameRequestFull(
                 id=association.item_id,
-                name=f"{association.item.name} {association.item.description}".strip(),
+                name=(f"{association.item.name} "
+                      f"{association.item.description if association.item.description else ''}").strip(),
                 quantity=association.count,
                 executor=UserResponse(
                     id=association.executor.user.id,
@@ -626,7 +635,7 @@ async def sql_get_request_details(
                 AttachmentsRequest(
                     file_name=attachment.file_name,
                     content_type=attachment.document_type,
-                    file_path=attachment.file_path,
+                    file_path=attachment.file_path.replace("web_app/src", ""),
                     size=attachment.size
                 )
                 for attachment in request.related_documents
@@ -774,6 +783,12 @@ async def sql_edit_request(
         if data.description.strip() != request.description.strip():
             list_update.append(f"Изменено описание: {request.description} -> {data.description}")
             request.description = data.description
+
+        if data.is_emergency != request.is_emergency:
+            view_emergency = lambda x: "Аварийная" if x else "Обычная"
+            list_update.append(f"Изменена срочность: {view_emergency(request.is_emergency)} "
+                               f"-> {view_emergency(data.is_emergency)}")
+            request.is_emergency = data.is_emergency
 
         items_ids = tuple(item.id for item in data.items)
 
@@ -1290,7 +1305,8 @@ async def sql_execute_request(
             1 for item in request.item_associations
             if item.status in (RequestItemStatus.PLANNED, RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED)
         )
-        
+
+        print(sum_items_completed, sum_items_completed_and_planned, len(request.item_associations))
         if len(request.item_associations) == sum_items_completed:
             request.status = RequestStatus.COMPLETED
         
@@ -1537,7 +1553,7 @@ async def sql_get_requests_for_download(
             query = query.where(Request.status == STATUS_MAPPING[status_filter])
 
         else:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Status not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Status not found")
 
         if isinstance(type_filter_id, int):
             type_filter = next(
@@ -1622,9 +1638,149 @@ async def sql_get_planning_for_download(
         config.logger.error(f"Database error view planning for download: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
+    except Exception as e:
+        config.logger.error(f"Unexpected error view planning for download: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
+
+
+# Выводим количество заявок пользователя
+@connection
+async def sql_get_count_requests_by_user(
+    user: User,
+    current_department: Optional[int],
+    session: AsyncSession
+) -> List[Dict[str, Any]]:
+    try:
+        if user.role in (UserRole.EXECUTOR, UserRole.EXECUTOR_ORGANIZATION):
+            query = sa.select(
+                RequestItem.status,
+                sa.func.count(RequestItem.status).label('count')
+            ).join(
+                Request, RequestItem.request_id == Request.id
+            ).group_by(RequestItem.status)
+
+            status_mapping = tuple(REQUEST_ITEM_STATUS_MAPPING.values())
+            status_mapping_id = REQUEST_ITEM_STATUS_ID_MAPPING
+
+            if user.is_executor:
+                query = query.where(RequestItem.executor_id == user.executor_profile.id)
+
+            else:
+                query = query.where(RequestItem.executor_organization_id == user.executor_organization_profile.id)
+        else:
+            query = sa.select(
+                Request.status,
+                sa.func.count(Request.status).label('count')
+            ).group_by(Request.status)
+
+            if user.is_secretary:
+                status_mapping = tuple(STATUS_MAPPING.values())
+                status_mapping_id = STATUS_ID_MAPPING
+                query = query.where(Request.secretary_id == user.secretary_profile.id)
+
+            elif user.is_judge:
+                status_mapping = tuple(STATUS_MAPPING.values())
+                status_mapping_id = STATUS_ID_MAPPING
+                query = query.where(Request.judge_id == user.judge_profile.id)
+
+            elif user.is_management:
+                status_mapping = tuple(STATUS_MAPPING.values())[1:]
+                status_mapping_id = STATUS_ID_MAPPING[1:]
+                query = query.where(Request.management_id == user.management_profile.id)
+
+            elif user.is_management_department:
+                status_mapping = tuple(STATUS_MAPPING.values())[2:]
+                status_mapping_id = STATUS_ID_MAPPING[2:]
+                query = query.where(Request.management_department_id == user.management_department_profile.id)
+
+            else:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
+
+        if current_department is not None:
+            query = query.where(Request.department_id == current_department)
+
+        requests_status_result = await session.execute(query)
+        requests_status = requests_status_result.all()
+
+        status_count = defaultdict(int, {s: count for s, count in requests_status})
+        result = []
+        for value, status_info in zip(status_mapping, status_mapping_id):
+            result.append({
+                **status_info,
+                "count": status_count[value]
+            })
+
+        return result
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error view count requests: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+
     except HTTPException:
         raise
 
     except Exception as e:
-        config.logger.error(f"Unexpected error view planning for download: {e}")
+        config.logger.error(f"Unexpected error view count requests: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
+
+
+# Выводим количество планируемых заявок пользователя
+@connection
+async def sql_get_count_planning_requests_by_user(
+    user: User,
+    session: AsyncSession
+) -> List[Dict[str, Any]]:
+    try:
+        query = (
+            sa.select(
+                Request.department_id,
+                sa.func.count(Request.department_id).label('count')
+            )
+            .join(RequestItem, Request.id == RequestItem.request_id)
+            .where(RequestItem.status == RequestItemStatus.PLANNED)
+            .group_by(Request.department_id)
+        )
+
+        if user.is_management:
+           query = query.where(Request.management_id == user.management_profile.id)
+
+        elif user.is_management_department:
+            query = query.where(Request.management_department_id == user.management_department_profile.id)
+
+        elif user.is_executor:
+            query = query.where(RequestItem.executor_id == user.executor_profile.id)
+
+        elif user.is_executor_organization:
+            query = query.where(RequestItem.executor_organization_id == user.executor_organization_profile.id)
+
+        else:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
+
+        planning_department_result = await session.execute(query)
+        planning_department = planning_department_result.all()
+        planning_count = defaultdict(int, {dept_id: count for dept_id, count in planning_department})
+
+        department = await sql_get_all_department(session=session, no_decor=True)
+
+        result = []
+
+        for department_info in department:
+            result.append({
+                **department_info,
+                "count": planning_count[department_info["id"]]
+            })
+
+        return result
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error view count planning: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        config.logger.error(f"Unexpected error view count planning: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")

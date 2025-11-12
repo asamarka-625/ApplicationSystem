@@ -2,8 +2,8 @@
 
 {% block content %}
 <section id="requests" class="content-section">
+    <h1>Заявки</h1>
     <div class="section-header">
-        <h1>Заявки</h1>
         <div class="filters">
             <select id="statusFilter"></select>
             <select id="typeFilter">
@@ -31,6 +31,37 @@
             </thead>
             <tbody id="requestsTableBody"></tbody>
         </table>
+
+        <!-- Пагинация -->
+        <div class="pagination-container">
+            <div class="pagination-info" id="paginationInfo"></div>
+            <div class="pagination-controls">
+                <button id="firstPage" class="pagination-btn">
+                    <i class="fas fa-angle-double-left"></i>
+                </button>
+                <button id="prevPage" class="pagination-btn">
+                    <i class="fas fa-angle-left"></i>
+                </button>
+
+                <div class="pagination-numbers" id="paginationNumbers"></div>
+
+                <button id="nextPage" class="pagination-btn">
+                    <i class="fas fa-angle-right"></i>
+                </button>
+                <button id="lastPage" class="pagination-btn">
+                    <i class="fas fa-angle-double-right"></i>
+                </button>
+            </div>
+            <div class="pagination-size">
+                <label>Показывать:</label>
+                <select id="pageSize">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+        </div>
     </div>
 </section>
 <div id="planningModal" class="modal">

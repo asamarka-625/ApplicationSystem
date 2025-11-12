@@ -411,7 +411,7 @@ document.addEventListener('DOMContentLoaded', function() {
             link.className = 'attachment-link';
             link.textContent = `${attachment.file_name}.${attachment.content_type.split('/')[1]}`;
             link.target = '_blank';
-            link.download = attachment.file_path;
+            link.href = attachment.file_path;
 
             // Размер файла
             const size = document.createElement('span');

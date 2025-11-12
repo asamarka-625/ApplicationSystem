@@ -827,6 +827,9 @@ body {
 .status-in_progress { background: #cce7ff; color: #004085; }
 .status-completed { background: #d4edda; color: #155724; }
 .status-cancelled { background: #f8d7da; color: #721c24; }
+.status-ending_completed { background: #d4edda; color: #155724;}
+.status-finished { background: #d4edda; color: #155724; }
+.status-planned { background: #cce7ff; color: #004085; }
 
 .emergency-badge {
     background: #dc3545;
@@ -980,4 +983,92 @@ body {
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+}
+
+.pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.pagination-info {
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.pagination-btn {
+    padding: 8px 12px;
+    border: 1px solid #dee2e6;
+    background-color: white;
+    color: #495057;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-numbers {
+    display: flex;
+    gap: 5px;
+    margin: 0 10px;
+}
+
+.page-number {
+    padding: 8px 12px;
+    border: 1px solid #dee2e6;
+    background-color: white;
+    color: #495057;
+    cursor: pointer;
+    border-radius: 4px;
+    min-width: 40px;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.page-number:hover {
+    background-color: #e9ecef;
+}
+
+.page-number.active {
+    background-color: #198754;
+    color: white;
+    border-color: #198754;
+}
+
+.pagination-size {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pagination-size label {
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.pagination-size select {
+    padding: 6px 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background-color: white;
 }
