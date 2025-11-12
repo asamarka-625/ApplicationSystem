@@ -39,7 +39,7 @@ async def get_filter_info(
     if request_type:
         result[ "request_type"] = TYPE_ID_MAPPING
 
-    if department:
+    if department and current_user.role not in (UserRole.SECRETARY, UserRole.JUDGE):
         if for_planning:
             result["department"] = await sql_get_count_planning_requests_by_user(
                 user=current_user

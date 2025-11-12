@@ -8,6 +8,7 @@ let totalPages = 0;
 
 let current_department = null;
 let current_type = null;
+let current_status= null;
 
 async function ExecuteRequest(e, id, item_id) {
     try {
@@ -87,12 +88,15 @@ async function loadViewInfo() {
             select_department_filter.appendChild(option);
         });
 
-        if (current_department != null || current_type != null) {
+        if (current_department != null || current_type != null || current_status != null) {
             if (current_department != null) {
                 select_department_filter.value = current_department;
             }
             if (current_type != null) {
-                select_status_filter.value = current_type;
+                select_type_filter.value = current_type;
+            }
+            if (current_status != null) {
+                select_status_filter.value = current_status;
             }
         } else {
             initializeFilterListeners();
@@ -113,6 +117,7 @@ function initializeFilterListeners() {
             const selectedOption = this.options[this.selectedIndex];
             totalItems = Number(selectedOption.dataset.count);
             totalPages = Math.ceil(totalItems / pageSize);
+            current_status = selectedOption.value;
             currentPage = 1;
             loadRequests(1);
         });
