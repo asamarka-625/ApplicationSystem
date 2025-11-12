@@ -170,7 +170,6 @@ async function loadViewInfo() {
         });
 
         const select_status_filter = document.getElementById('statusFilter');
-        select_status_filter.innerHTML = '<option value="">Все типы</option>';
         status_data.forEach(status => {
             const option = document.createElement('option');
             option.value = status.id;

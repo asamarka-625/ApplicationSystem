@@ -185,11 +185,16 @@ async def sql_get_requests_by_user(
             query = query.where(Request.judge_id == user.judge_profile.id)
 
         elif user.is_management:
-            query = query.where(
+            query = (query.where(
                 Request.status != RequestStatus.REGISTERED
+            ).where(
+                sa.or_(
+                    Request.status == RequestStatus.CONFIRMED,
+                    Request.management_id == user.management_profile.id
+                )
             ).options(
                 so.selectinload(Request.item_associations)
-            )
+            ))
 
         elif user.is_management_department:
             query = query.where(
@@ -421,7 +426,7 @@ async def sql_get_planning_requests(
             sa.select(Request)
             .options(
                 so.selectinload(Request.item_associations).joinedload(RequestItem.item)
-            ).offset((page - 1) * page_size).limit(page_size).order_by(Request.created_at)
+            ).offset((page - 1) * page_size).limit(page_size)
         )
 
         if isinstance(department_filter_id, int):
@@ -1306,7 +1311,6 @@ async def sql_execute_request(
             if item.status in (RequestItemStatus.PLANNED, RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED)
         )
 
-        print(sum_items_completed, sum_items_completed_and_planned, len(request.item_associations))
         if len(request.item_associations) == sum_items_completed:
             request.status = RequestStatus.COMPLETED
         
@@ -1686,7 +1690,12 @@ async def sql_get_count_requests_by_user(
             elif user.is_management:
                 status_mapping = tuple(STATUS_MAPPING.values())[1:]
                 status_mapping_id = STATUS_ID_MAPPING[1:]
-                query = query.where(Request.management_id == user.management_profile.id)
+                query = query.where(
+                    sa.or_(
+                        Request.status == RequestStatus.CONFIRMED,
+                        Request.management_id == user.management_profile.id
+                    )
+                )
 
             elif user.is_management_department:
                 status_mapping = tuple(STATUS_MAPPING.values())[2:]
@@ -1703,6 +1712,7 @@ async def sql_get_count_requests_by_user(
         requests_status = requests_status_result.all()
 
         status_count = defaultdict(int, {s: count for s, count in requests_status})
+
         result = []
         for value, status_info in zip(status_mapping, status_mapping_id):
             result.append({
@@ -1780,7 +1790,5 @@ async def sql_get_count_planning_requests_by_user(
         raise
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
         config.logger.error(f"Unexpected error view count planning: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
