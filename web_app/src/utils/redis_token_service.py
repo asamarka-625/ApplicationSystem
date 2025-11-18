@@ -11,6 +11,7 @@ class TokenService:
         self.redis: Optional[redis.Redis] = None
         self.blacklist_prefix = "blacklist:"
         self.session_prefix = "access_token:"
+        self.reset_password = "reset_password:"
 
     async def init_redis(self):
         """Инициализация подключения к Redis"""
@@ -93,14 +94,32 @@ class TokenService:
             # Выполняем атомарно
             await pipe.execute()
 
+
+    async def add_reset_password_token(self, token: str, user_id: int):
+        """Сохранение токена для смены пароля пользователя в Redis"""
+        key = f"{self.reset_password}{token}"
+        await self.redis.setex(
+            key,
+            24 * 3600,
+            user_id
+        )
+
+    async def get_reset_password_token(self, token: str) -> Optional[int]:
+        """Получение токена для смены пароля пользователя в Redis"""
+        key = f"{self.reset_password}{token}"
+        user_id = await self.redis.exists(key)
+        return user_id
+
     async def get_stats(self) -> dict:
         """Статистика аутентификаций"""
         blacklist_keys = await self.redis.keys(f"{self.blacklist_prefix}*")
         session_keys = await self.redis.keys(f"{self.session_prefix}*")
+        all_token_reset_password = await self.redis.keys(f"{self.reset_password}*")
 
         return {
             "total_blacklisted": len(blacklist_keys),
             "total_active_sessions": len(session_keys),
+            "total_token_reset_password": len(all_token_reset_password),
             "memory_usage": await self.redis.info('memory')
         }
 

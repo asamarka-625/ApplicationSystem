@@ -9,7 +9,8 @@ from web_app.src.core import config, engine, setup_database
 from web_app.src.routers import router
 from web_app.src.admin import (UserAdmin, ItemAdmin, CategoryAdmin, DepartmentAdmin,
                                RequestAdmin, SecretaryAdmin, JudgeAdmin, ManagementAdmin,
-                               ExecutorAdmin, ManagementDepartmentAdmin, ExecutorOrganizationAdmin)
+                               ExecutorAdmin, ManagementDepartmentAdmin, ExecutorOrganizationAdmin,
+                               authentication_backend)
 from web_app.src.middlewares import AuthenticationMiddleware
 from web_app.src.utils import token_service
 
@@ -53,7 +54,7 @@ app.add_middleware(
 
 app.add_middleware(AuthenticationMiddleware, login_url="/login")
 
-admin = Admin(app, engine)
+admin = Admin(app, engine, authentication_backend=authentication_backend)
 admin.add_view(UserAdmin)
 admin.add_view(SecretaryAdmin)
 admin.add_view(JudgeAdmin)

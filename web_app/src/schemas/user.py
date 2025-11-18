@@ -20,3 +20,7 @@ class UserInfoResponse(BaseModel):
 class UserResponse(BaseModel):
     id: Optional[Annotated[int, Field(ge=1)]]
     name: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
+
+
+class PasswordResetRequest(BaseModel):
+    email: Annotated[str, Field(strict=True, strip_whitespace=True)]

@@ -10,6 +10,7 @@ from web_app.src.core import config
 from web_app.src.models import User, UserRole
 from web_app.src.core import connection
 from web_app.src.schemas import UserInfoResponse
+from web_app.src.utils.work_with_password import get_password_hash
 
 
 # Проверяем, существует ли пользователь с таким именем
@@ -231,6 +232,30 @@ async def sql_get_users_without_role(
 
         return users
 
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error found user by without role: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error found user by without role: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
+
+
+# Получаем пользователя по email
+@connection
+async def sql_get_user_by_email(
+    email: str,
+    session: AsyncSession
+) -> User:
+    try:
+        user_result = await session.execute(
+            sa.select(User)
+            .where(User.email == email)
+        )
+        user = user_result.scalar_one()
+
+        return user
+
     except NoResultFound:
         config.logger.info("Users not found by without role")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -241,5 +266,37 @@ async def sql_get_users_without_role(
 
     except Exception as e:
         config.logger.error(f"Unexpected error found user by without role: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
+
+
+# Обновляем пароль пользователя по id
+@connection
+async def sql_update_password_user_by_id(
+    user_id: int,
+    password: str,
+    session: AsyncSession
+) -> str:
+    try:
+        user_result = await session.execute(
+            sa.select(User)
+            .where(User.id == user_id)
+        )
+        user = user_result.scalar_one()
+
+        user.password_hash = get_password_hash(password)
+        await session.commit()
+
+        return user.username
+
+    except NoResultFound:
+        config.logger.info("Users not found by id")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error update password user: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error update password user: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
 

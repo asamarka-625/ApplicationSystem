@@ -7,7 +7,9 @@ from fastapi.responses import JSONResponse, RedirectResponse
 # Внутренние модули
 from web_app.src.core import config
 from web_app.src.dependencies import authenticate_user, create_access_token
-from web_app.src.utils import token_service
+from web_app.src.utils import token_service, create_reset_token, send_password_reset_email
+from web_app.src.crud import sql_get_user_by_email
+from web_app.src.schemas import PasswordResetRequest
 
 
 router = APIRouter()
@@ -74,4 +76,37 @@ async def logout_get(
 @router.get("/black_tokens", response_class=JSONResponse)
 async def get_black_tokens():
     return await token_service.get_stats()
+
+
+# Запрос на восстановление пароля
+@router.post("/login/forgot-password", response_class=JSONResponse)
+async def forgot_password(request: PasswordResetRequest):
+    # Ищем пользователя по email
+    user = await sql_get_user_by_email(email=request.email)
+
+    if not user:
+        return {"message": "Если пользователь с таким email существует, инструкции отправлены"}
+
+    # Создаем токен восстановления
+    reset_token = create_reset_token()
+
+    await token_service.add_reset_password_token(
+        token=reset_token,
+        user_id=user.id
+    )
+
+    # Отправляем email
+    email_sent = send_password_reset_email(
+        to_email=user.email,
+        reset_token=reset_token,
+        username=user.username
+    )
+
+    if not email_sent:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error send email"
+        )
+
+    return {"message": "Если пользователь с таким email существует, инструкции отправлены"}
 

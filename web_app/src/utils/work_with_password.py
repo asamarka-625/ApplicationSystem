@@ -1,4 +1,6 @@
 # Внешние зависимости
+import secrets
+import string
 from passlib.context import CryptContext
 
 
@@ -20,3 +22,13 @@ def verify_password(plain_password, hashed_password):
 
 def get_password_hash(password):
     return pwd_context.hash(password)
+
+
+def create_reset_token():
+    return secrets.token_urlsafe(32)
+
+
+def generate_password(length: int):
+    alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+    password = ''.join(secrets.choice(alphabet) for _ in range(length))
+    return password

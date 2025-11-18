@@ -10,3 +10,8 @@ from web_app.src.admin.item import ItemAdmin
 from web_app.src.admin.category import CategoryAdmin
 from web_app.src.admin.request import RequestAdmin
 from web_app.src.admin.departament import DepartmentAdmin
+from web_app.src.admin.authentication import BasicAuthBackend
+
+from web_app.src.core import config
+
+authentication_backend = BasicAuthBackend(secret_key=config.SECRET_KEY)

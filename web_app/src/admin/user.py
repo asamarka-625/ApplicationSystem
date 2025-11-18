@@ -131,9 +131,11 @@ class UserAdmin(ModelView, model=User):
 
     # При создании/изменении пользователя
     async def on_model_change(self, data, model, is_created, request):
+        """
         if 'role' in data:
             convert_role = data['role']
             data['role'] = ROLE_MAPPING[convert_role]
+        """
 
         if 'full_name' in data:
             data['full_name'] = data['full_name'].lower()
@@ -152,7 +154,7 @@ class UserAdmin(ModelView, model=User):
                 if existing is not None:
                     raise ValidationError(f"Уникальное имя '{data['username']}' уже существует")
             else:
-                if model.id != existing:
+                if existing is not None and model.id != existing:
                     raise ValidationError(f"Уникальное имя '{data['username']}' уже занят")
 
         # Проверка уникальности email
@@ -163,8 +165,8 @@ class UserAdmin(ModelView, model=User):
                 if existing is not None:
                     raise ValidationError(f"Email '{data['email']}' уже зарегистрирован")
             else:
-                if model.id != existing:
-                    raise ValidationError(f"Email '{data['username']}' уже используется")
+                if existing is not None and model.id != existing:
+                    raise ValidationError(f"Email '{data['email']}' уже используется")
 
         # Хэширование пароля
         if 'password_hash' in data and data['password_hash']:

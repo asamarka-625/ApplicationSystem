@@ -1,10 +1,14 @@
 # Внешние зависимости
+from typing import Annotated
+from pydantic import Field
 from fastapi import APIRouter, Request, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 # Внутренние модули
 from web_app.src.dependencies import get_current_user
 from web_app.src.models import User
+from web_app.src.utils import token_service, generate_password
+from web_app.src.crud import sql_update_password_user_by_id
 
 
 router = APIRouter()
@@ -155,3 +159,43 @@ async def login_page(request: Request):
     }
 
     return templates.TemplateResponse('login.html', context=context)
+
+
+# Подтверждение смены пароля
+@router.get("/login/forgot-password", response_class=HTMLResponse)
+async def reset_password(
+        request: Request
+):
+    context = {
+        "request": request
+    }
+    return templates.TemplateResponse('forgot_password.html', context=context)
+
+
+# Подтверждение смены пароля
+@router.get("/login/reset-password", response_class=HTMLResponse)
+async def reset_password(
+        request: Request,
+        token: Annotated[str, Field(strict=True, strip_whitespace=True)]
+):
+    # Проверяем токен
+    user_id = await token_service.get_reset_password_token(token)
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Неверный или просроченный токен"
+        )
+
+    new_password = generate_password(length=8)
+
+    user_name = await sql_update_password_user_by_id(
+        user_id=user_id,
+        password=new_password
+    )
+
+    context = {
+        "request": request,
+        "username": user_name,
+        "password": new_password
+    }
+    return templates.TemplateResponse('update_password.html', context=context)

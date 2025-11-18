@@ -10,7 +10,6 @@ config = get_config()
 engine = create_async_engine(config.DATABASE_URL)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
-
 # Инициализируем таблицы
 async def setup_database():
     config.logger.info("Инициализируем таблицы")

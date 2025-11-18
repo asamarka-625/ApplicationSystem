@@ -1,8 +1,6 @@
 # Внешние зависимости
-import uuid
 from markupsafe import Markup
 from sqladmin import ModelView
-from wtforms import SelectField
 # Внутренние модули
 from web_app.src.models import Request
 
@@ -26,7 +24,13 @@ class RequestAdmin(ModelView, model=Request):
         Request.update_at: "Дата обновления",
         Request.completed_at: "Выполнено",
         Request.department: "Отделение",
-        'items_formatted': "Запрошено"
+        Request.secretary: "Секретарь судьи",
+        Request.judge: "Судья",
+        Request.management: "НАУ",
+        Request.management_department: "Сотрудник управления отдела",
+        'items_formatted': "Запрошено",
+        Request.description: "Описание",
+        Request.description_management_department: "Комментарий от НАУ",
     }
 
     column_searchable_list = [Request.registration_number] # список столбцов, которые можно искать
@@ -45,57 +49,25 @@ class RequestAdmin(ModelView, model=Request):
         Request.update_at: lambda m, a: m.update_at.strftime("%d.%m.%Y %H:%M") if m.update_at else "Не обновлен",
         Request.completed_at: lambda m, a: m.completed_at.strftime("%d.%m.%Y %H:%M") \
             if m.completed_at else "Не выполнено",
-        'items_formatted': lambda m, a: RequestAdmin._format_items_detail(m.items)
+        'items_formatted': lambda m, a: RequestAdmin._format_items_detail(m.item_associations)
     }
 
     @staticmethod
-    def _format_items_detail(items):
-        """Детальное форматирование с ссылками"""
-        if not items:
+    def _format_items_detail(associations):
+        if not associations:
             return "Нет запрошенных элементов"
 
         items_links = []
-        for item in items:
-            item_url = f"/admin/item/details/{item.id}"
+        for association in associations:
+            item_url = f"/admin/item/details/{association.item_id}"
             items_links.append(
                 f'<a href="{item_url}" target="_blank" style="text-decoration: none; color: #007bff;">'
-                f'{item.name} (SN: {item.serial_number})'
-                f'</a>'
+                f'Предмет #{association.item_id}</a>'
             )
 
-        items_list = "<br>".join(items_links)  # используем <br> вместо \n
-        return Markup(f"<div>{items_list}</div>")  # оборачиваем в Markup
+        items_list = "<br>".join(items_links)
+        return Markup(f"<div>{items_list}</div>")
 
-    form_create_rules = [
-        'department',
-        'creator',
-        'items',
-        'description',
-        'request_type',
-        'is_emergency'
-    ]
-
-    form_overrides = {
-        'request_type': SelectField,
-    }
-
-    form_args = {
-        'request_type': {
-            'label': 'Тип заявки',
-            'description': 'Выберите тип заявки',
-            'choices': [
-                ('материально-техническое обеспечение', 'Материально-техническое обеспечение'),
-                ('техническое обслуживание', 'Техническое обслуживание'),
-                ('эксплуатационное обслуживание', 'Эксплуатационное обслуживание'),
-                ('аварийная', 'Аварийная')
-            ],
-            'coerce': lambda x: x
-        }
-    }
-
-    async def on_model_change(self, data, model, is_created, request):
-        if is_created:
-            data['registration_number'] = str(uuid.uuid4())
 
     column_details_list = [
         Request.id,
@@ -107,23 +79,18 @@ class RequestAdmin(ModelView, model=Request):
         Request.update_at,
         Request.completed_at,
         Request.department,
-        'items_formatted'
+        Request.secretary,
+        Request.judge,
+        Request.management,
+        Request.management_department,
+        'items_formatted',
+        Request.description,
+        Request.description_management_department
     ]
 
-    form_edit_rules = [
-        'department',
-        'creator',
-        'items',
-        'description',
-        'request_type',
-        'is_emergency',
-        'assignee',
-        'status'
-    ]
-
-    can_create = True # право создавать
-    can_edit = True # право редактировать
-    can_delete = True # право удалять
+    can_create = False # право создавать
+    can_edit = False # право редактировать
+    can_delete = False # право удалять
     can_view_details = True # право смотреть всю информацию
     can_export = True # право экспортировать
 
