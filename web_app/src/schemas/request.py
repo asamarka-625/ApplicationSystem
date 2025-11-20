@@ -52,6 +52,11 @@ class ItemsRequest(ItemsIdRequest):
     quantity: Annotated[int, Field(ge=1)]
 
 
+# Схема готовности заявки
+class ItemsExecuteRequest(ItemsIdRequest):
+    comment: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
+
+
 # Схема вложений заявки
 class AttachmentsRequest(BaseModel):
     file_name: Annotated[str, Field(strict=True, strip_whitespace=True)]
@@ -89,6 +94,7 @@ class RightsResponse(BaseModel):
 # Схема ответа информации о заявки
 class RequestResponse(BaseModel):
     registration_number: Annotated[str, Field(strict=True, strip_whitespace=True)]
+    human_registration_number: Annotated[str, Field(strict=True, strip_whitespace=True)]
     request_type: Dict[str, str]
     status: Dict[str, str]
     is_emergency: bool
@@ -126,6 +132,7 @@ class ItemsNameRequestFull(ItemsNameRequest):
     executor_organization: Optional[UserResponse]
     description_executor: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
     description_organization: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
+    description_completed: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
     deadline_executor: Optional[datetime]
     deadline_organization: Optional[datetime]
     status: RequestItemStatus
@@ -135,6 +142,7 @@ class ItemsNameRequestFull(ItemsNameRequest):
 # Схема ответа подробной информации о заявки
 class RequestDetailResponse(BaseModel):
     registration_number: Annotated[str, Field(strict=True, strip_whitespace=True)]
+    human_registration_number: Annotated[str, Field(strict=True, strip_whitespace=True)]
     request_type: Dict[str, str]
     status: Dict[str, str]
     items: List[ItemsNameRequestFull]
@@ -179,6 +187,7 @@ class ScheduleRequest(BaseModel):
 # Схема заявки для исполнителя
 class RequestExecutorResponse(BaseModel):
     registration_number: Annotated[str, Field(strict=True, strip_whitespace=True)]
+    human_registration_number: Annotated[str, Field(strict=True, strip_whitespace=True)]
     request_type: Dict[str, str]
     status: Dict[str, str]
     item: ItemsNameRequest

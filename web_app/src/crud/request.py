@@ -14,7 +14,8 @@ from web_app.src.models import (Request, TYPE_ID_MAPPING, request_item, RequestI
                                 RequestType, RequestDocument, RequestAction, RequestStatus, TYPE_MAPPING,
                                 STATUS_MAPPING, User, Secretary, Judge, Management, Executor, Item, UserRole,
                                 ManagementDepartment, ExecutorOrganization, RequestItemStatus,
-                                STATUS_ID_MAPPING, REQUEST_ITEM_STATUS_ID_MAPPING, REQUEST_ITEM_STATUS_MAPPING)
+                                STATUS_ID_MAPPING, REQUEST_ITEM_STATUS_ID_MAPPING, REQUEST_ITEM_STATUS_MAPPING,
+                                Department)
 from web_app.src.core import connection
 from web_app.src.schemas import (CreateRequest, RequestResponse, RequestDetailResponse,
                                  RequestHistoryResponse, RequestDataResponse, RightsResponse,
@@ -107,6 +108,15 @@ async def sql_create_request(
         else:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid request type")
 
+        try:
+            department_code_result = await session.execute(
+                sa.select(Department.code)
+                .where(Department.id == department_id)
+            )
+            department_code = department_code_result.scalar_one()
+        except NoResultFound:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Department not found")
+
         new_request = Request(
             registration_number=str(uuid.uuid4()),
             description=data.description,
@@ -118,6 +128,8 @@ async def sql_create_request(
         )
         session.add(new_request)
         await session.flush()
+
+        new_request.human_registration_number = f"{new_request.id}-{department_code}-{datetime.now().year}"
 
         if data.items:
             for item in data.items:
@@ -234,6 +246,7 @@ async def sql_get_requests_by_user(
         return [
             RequestResponse(
                 registration_number=request.registration_number,
+                human_registration_number=request.human_registration_number,
                 request_type={
                     "name": request.request_type.name,
                     "value": request.request_type.value
@@ -360,6 +373,7 @@ async def sql_get_requests_for_executor(
         return [
             RequestExecutorResponse(
                 registration_number=request.registration_number,
+                human_registration_number=request.human_registration_number,
                 item=ItemsNameRequest(
                     id=association.item.id,
                     name=association.item.name,
@@ -489,6 +503,7 @@ async def sql_get_planning_requests(
         return [
             RequestExecutorResponse(
                 registration_number=request.registration_number,
+                human_registration_number=request.human_registration_number,
                 item=ItemsNameRequest(
                     id=association.item.id,
                     name=association.item.name,
@@ -595,6 +610,7 @@ async def sql_get_request_details(
                 description_executor=(association.description_executor if right_item and
                                       not user.is_executor_organization else None),
                 description_organization=association.description_organization if right_item else None,
+                description_completed=association.description_completed if association.description_completed else None,
                 deadline_executor=association.deadline_executor,
                 deadline_organization=association.deadline_organization,
                 status=association.status,
@@ -603,6 +619,7 @@ async def sql_get_request_details(
 
         return RequestDetailResponse(
             registration_number=request.registration_number,
+            human_registration_number=request.human_registration_number,
             request_type={
                 "name": request.request_type.name,
                 "value": request.request_type.value
@@ -665,18 +682,18 @@ async def sql_get_request_details(
                 edit=request.status == RequestStatus.REGISTERED,
                 approve=request.status == RequestStatus.REGISTERED,
                 reject_before=request.status == RequestStatus.REGISTERED,
-                reject_after=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED),
-                redirect_management_department=request.status not in (RequestStatus.COMPLETED,
+                reject_after=request.status not in (RequestStatus.FINISHED, RequestStatus.CANCELLED),
+                redirect_management_department=request.status not in (RequestStatus.FINISHED,
                                                                       RequestStatus.CANCELLED),
-                redirect_executor=request.status not in (RequestStatus.COMPLETED,
+                redirect_executor=request.status not in (RequestStatus.FINISHED,
                                                          RequestStatus.CANCELLED),
-                redirect_org=request.status not in (RequestStatus.COMPLETED,
+                redirect_org=request.status not in (RequestStatus.FINISHED,
                                                     RequestStatus.CANCELLED),
-                deadline=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED),
-                planning=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED),
-                ready=request.status not in (RequestStatus.COMPLETED, RequestStatus.CANCELLED),
-                confirm_management_department=False,
-                confirm_management=False
+                deadline=request.status not in (RequestStatus.FINISHED, RequestStatus.CANCELLED),
+                planning=request.status not in (RequestStatus.FINISHED, RequestStatus.CANCELLED),
+                ready=request.status not in (RequestStatus.FINISHED, RequestStatus.CANCELLED),
+                confirm_management_department=request.status == RequestStatus.COMPLETED,
+                confirm_management=request.status == RequestStatus.ENDING_COMPLETED
             )
         )
 
@@ -1095,25 +1112,37 @@ async def sql_redirect_executor_request(
             executor.management_department_id != user.management_department_profile.id):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
-        request_item = next((obj for obj in request.item_associations if obj.item_id == data.item_id), None)
+        exists_executor_flag = next((True for obj in request.item_associations if obj.executor_id is not None), False)
+        if exists_executor_flag:
+            request_item = next((obj for obj in request.item_associations if obj.item_id == data.item_id), None)
+            if request_item is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
 
-        if request_item is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+            if request_item.status in (RequestStatus.REGISTERED, RequestStatus.CANCELLED) or \
+                    request_item.status in (RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED):
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
-        if request_item.status in (RequestStatus.REGISTERED, RequestStatus.CANCELLED) or \
-            request_item.status in (RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
+            request_item.executor_id = data.user_role_id
+            request_item.description_executor = data.description
+            request_item.deadline_executor = data.deadline
 
-        request_item.executor_id = data.user_role_id
-        request_item.description_executor = data.description
-        request_item.deadline_executor = data.deadline
+            description = (f"Заявка отправлена на выполнение\nИсполнитель: {executor.user.full_name}\n"
+                           f"Срок: {data.deadline.strftime("%d.%m.%Y")}")
+
+        else:
+            for obj in request.item_associations:
+                obj.executor_id = data.user_role_id
+                obj.description_executor = data.description
+                obj.deadline_executor = data.deadline
+
+            description = (f"Заявки отправлены на выполнение\nИсполнитель для всех заявок: {executor.user.full_name}\n"
+                           f"Срок: {data.deadline.strftime("%d.%m.%Y")}")
 
         new_history = RequestHistory(
             action=RequestAction.APPOINTED,
             request_id=request.id,
             user_id=user_id,
-            description=(f"Заявка отправлена на выполнение\nИсполнитель: {executor.user.full_name}"
-                         f"Срок: {data.deadline.strftime("%d.%m.%Y")}")
+            description=description
         )
         session.add(new_history)
 
@@ -1135,7 +1164,7 @@ async def sql_redirect_executor_request(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
 
 
-# Назначение исполнителя заявки
+# Назначение организации-исполнителя заявки
 @connection
 async def sql_redirect_organization_request(
         registration_number: str,
@@ -1277,6 +1306,7 @@ async def sql_execute_request(
         registration_number: str,
         user_id: int,
         item_id: int,
+        comment: Optional[str],
         session: AsyncSession
 ) -> None:
     try:
@@ -1301,7 +1331,9 @@ async def sql_execute_request(
         )
 
         request.item_associations[association_num].status = RequestItemStatus.COMPLETED
-        
+        if comment is not None:
+            request.item_associations[association_num].description_completed = comment
+
         sum_items_completed = sum(
             1 for item in request.item_associations
             if item.status in (RequestItemStatus.COMPLETED, RequestItemStatus.CANCELLED)
@@ -1471,7 +1503,7 @@ async def sql_finish_request(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
 
 
-# Завершение заявки
+# Удаляем прикрепленные файлы
 @connection
 async def sql_delete_attachment(
     registration_number: str,

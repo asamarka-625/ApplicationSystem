@@ -29,7 +29,7 @@ async function loadCreateInfo() {
 function isMaintenanceSupport(requestTypeId) {
     const selectedType = requestTypes.find(type => type.id == requestTypeId);
     return selectedType && (
-        selectedType.name.toLowerCase().includes('техническое обслуживание')
+        selectedType.name.toLowerCase().includes('услуги')
     );
 }
 

@@ -23,12 +23,10 @@
             <div class="user-info-panel">
                 <span id="userName">{{ full_name }}</span>
                 <div class="user-role" id="userRole">{{ role_value }}</div>
-                {% if role != '' %}
                 <button onclick="logout()" class="logout-btn">
                     <i class="fa-solid fa-arrow-right-from-bracket"></i>
                     Выйти
                 </button>
-                {% endif %}
             </div>
         </div>
     </header>

@@ -1,9 +1,6 @@
 const API_URL = '/api/v1/request/view';
 const API_BASE_URL = '/api/v1/request';
 
-let currentRejectId = null;
-let currentEvent = null;
-
 let currentPage = 1;
 let pageSize = 10;
 let totalItems = 0;
@@ -12,144 +9,6 @@ let totalPages = 0;
 let current_department = null;
 let current_type = null;
 let current_status= null;
-
-// Функция для открытия модального окна отклонения
-function openRejectModal(e, id) {
-    currentRejectId = id;
-    currentEvent = e;
-
-    const modal = document.getElementById('rejectModal');
-    const textarea = document.getElementById('rejectReason');
-
-    // Сброс формы
-    textarea.value = '';
-    modal.style.display = 'block';
-
-    // Фокус на текстовом поле
-    setTimeout(() => textarea.focus(), 100);
-}
-
-// Функция для закрытия модального окна
-function closeRejectModal() {
-    const modal = document.getElementById('rejectModal');
-    modal.style.display = 'none';
-    currentRejectId = null;
-    currentEvent = null;
-}
-
-async function ExecuteRequest(e, id) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/execute/${id}`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        if (data.status !== 'success') {
-            throw new Error(data.message || 'Ошибка запроса');
-        }
-
-        const buttonContainer = e.target.closest('div');
-        const buttons = buttonContainer.querySelectorAll('a, button');
-
-        buttons.forEach(button => {
-            if (!button.classList.contains('btn-view-details')) {
-                button.style.display = 'none';
-            }
-        });
-
-        showNotification('Заявка успешно выполнена', 'success');
-        document.location.reload();
-
-    } catch (error) {
-        console.error('Ошибка выполнения заявки:', error);
-        showNotification('Ошибка выполнения заявки', 'error');
-    }
-}
-
-async function ConfirmRequest(e, id) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/approve/${id}`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        if (data.status !== 'success') {
-            throw new Error(data.message || 'Ошибка запроса');
-        }
-
-        const buttonContainer = e.target.closest('div');
-        const buttons = buttonContainer.querySelectorAll('a, button');
-
-        buttons.forEach(button => {
-            if (!button.classList.contains('btn-view-details')) {
-                button.style.display = 'none';
-            }
-        });
-
-        showNotification('Заявка успешно утверждена', 'success');
-        document.location.reload();
-
-    } catch (error) {
-        console.error('Ошибка утверждения заявки:', error);
-        showNotification('Ошибка утверждения заявки', 'error');
-    }
-}
-
-// Основная функция отклонения заявки
-async function RejectRequest(reason) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/reject/${currentRejectId}`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ comment: reason })
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        if (data.status !== 'success') {
-            throw new Error(data.message || 'Ошибка запроса');
-        }
-
-        // Скрываем кнопки (как в оригинальной функции)
-        const buttonContainer = currentEvent.target.closest('div');
-        const buttons = buttonContainer.querySelectorAll('a, button');
-
-        buttons.forEach(button => {
-            if (!button.classList.contains('btn-view-details')) {
-                button.style.display = 'none';
-            }
-        });
-
-        showNotification('Заявка отклонена', 'success');
-        closeRejectModal();
-        document.location.reload();
-    } catch (error) {
-        console.error('Ошибка при отклонении заявки:', error);
-        showNotification('Ошибка при отклонении заявки', 'error');
-    }
-}
 
 async function loadViewInfo() {
     try {
@@ -302,6 +161,7 @@ function displayRequests(data) {
 		row.classList.add(`tr-${request.actual_status}`);
         row.innerHTML = `
             <td>${request.registration_number}</td>
+            <td>${request.human_registration_number}</td>
             <td>${request.request_type.value}</td>
             <td>
                 <span class="status-badge status-${request.status.name.toLowerCase()}">
@@ -311,36 +171,9 @@ function displayRequests(data) {
             <td>${request.is_emergency ? '<span class="emergency-badge">Аварийная</span>' : 'Обычная'}</td>
             <td>${formatDate(request.created_at)}</td>
             <td>
-                <div style="display: flex; flex-direction: column; gap: 5px; width: max-content; text-align: center;">
-                    ${rights.view && request.rights.view ? `
-                        <a class="btn-view-details" href="/request/${request.registration_number}">
-                            <i class="fas fa-eye"></i> Просмотр
-                        </a>` : ''}
-                    ${rights.edit && request.rights.edit ? `
-                        <a class="btn-edit" href="/request/${request.registration_number}/edit">
-                            <i class="fa-solid fa-pen-to-square"></i> Редактировать
-                        </a>` : ''}
-                    ${rights.approve && request.rights.approve ? `
-                        <button class="btn-approve" onclick="ConfirmRequest(event, '${request.registration_number}')">
-                            <i class="fa-solid fa-thumbs-up"></i> Утвердить
-                        </button>` : ''}
-                    ${rights.redirect_management_department && request.rights.redirect_management_department ? `
-                        <a class="btn-redirect" href="/request/${request.registration_number}/redirect/management">
-                            <i class="fa-solid fa-calendar-check"></i> Назначить сотрудника управления
-                        </a> ` : ''}
-                    ${(rights.reject_after && request.rights.reject_after) || (rights.reject_before && request.rights.reject_before) ? `
-                        <button class="btn-reject" onclick="openRejectModal(event, '${request.registration_number}')">
-                            <i class="fa-solid fa-xmark"></i> Отклонить
-                        </button> ` : ''}
-                    ${rights.confirm_management_department && request.rights.confirm_management_department ? `
-                        <button class="btn-ready" onclick="ExecuteRequest(event, '${request.registration_number}')">
-                            <i class="fa-solid fa-thumbs-up"></i> Подтвердить выполнение
-                        </button> ` : ''}
-                    ${rights.confirm_management && request.rights.confirm_management ? `
-                        <button class="btn-ready" onclick="ExecuteRequest(event, '${request.registration_number}')">
-                            <i class="fa-solid fa-thumbs-up"></i> Завершить
-                        </button> ` : ''}
-                </div>
+                <a class="btn btn-view-details" href="/request/${request.registration_number}">
+                    <i class="fas fa-eye"></i> Просмотр
+                </a>
             </td>
         `;
         tbody.appendChild(row);
@@ -523,38 +356,9 @@ document.addEventListener('DOMContentLoaded', function() {
         loadRequests(currentPage);
     });
 
-    const rejectModal = document.getElementById('rejectModal');
-    const rejectForm = document.getElementById('rejectForm');
-    const cancelReject = document.getElementById('cancelReject');
-    const closeBtn = rejectModal.querySelector('.close');
-
-    // Обработчик отправки формы
-    rejectForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const reason = document.getElementById('rejectReason').value.trim();
-
-        if (!reason) {
-            showNotification('Пожалуйста, укажите причину отклонения', 'warning');
-            return;
-        }
-
-        RejectRequest(reason);
-    });
-
-    // Обработчики закрытия модального окна
-    cancelReject.addEventListener('click', closeRejectModal);
-    closeBtn.addEventListener('click', closeRejectModal);
-
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('exportDateUntil').max = today;
     document.getElementById('exportDateFrom').max = today;
-
-    // Закрытие при клике вне модального окна
-    window.addEventListener('click', function(e) {
-        if (e.target === rejectModal) {
-            closeRejectModal();
-        }
-    });
 
     // Закрытие модального окна при клике вне его
     document.addEventListener('click', function(event) {

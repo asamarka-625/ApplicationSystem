@@ -1,13 +1,20 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div id="actionPanel" class="action-panel" style="display: none;">
+    <div class="action-buttons-top"></div>
+</div>
 <div id="requestDetails" style="display: none;">
     <h2>Детали заявки <span id="registrationNumber"></span></h2>
 
     <table class="details-table">
         <tr>
-            <th>Регистрационный номер</th>
+            <th>ID заявки</th>
             <td id="regNumber"></td>
+        </tr>
+        <tr>
+            <th>Регистрационный номер</th>
+            <td id="humanRegistrationNumber"></td>
         </tr>
         <tr>
             <th>Тип заявки</th>
@@ -134,14 +141,11 @@
             </div>
 
             <div class="form-group">
-                <label for="executionDeadline">Срок исполнения (дней):</label>
+                <label for="executionDeadline">Срок исполнения:</label>
                 <input
-                    type="number"
+                    type="date"
                     id="executionDeadline"
                     class="form-control"
-                    value="20"
-                    min="1"
-                    max="365"
                 >
             </div>
         </div>
@@ -149,6 +153,28 @@
             <button type="button" class="btn btn-secondary" id="cancelExecutor">Отмена</button>
             <button type="button" class="btn btn-primary" id="assignExecutor">Назначить</button>
         </div>
+    </div>
+</div>
+<div id="rejectModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Отклонение заявки</h2>
+        <form id="rejectForm">
+            <div class="form-group">
+                <label for="rejectReason">Причина отклонения:</label>
+                <textarea
+                    id="rejectReason"
+                    name="reason"
+                    rows="4"
+                    placeholder="Укажите причину отклонения заявки..."
+                    required
+                ></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="cancelReject">Отмена</button>
+                <button type="submit" class="btn btn-danger" id="confirmReject">Отклонить заявку</button>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}

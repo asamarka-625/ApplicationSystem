@@ -1,6 +1,9 @@
 const API_URL = '/api/v1/request/view';
 const API_BASE_URL = '/api/v1';
 
+let currentRejectId = null;
+let currentEvent = null;
+
 function getRegistrationNumberFromUrl() {
     const url = window.location.href;
 
@@ -8,6 +11,144 @@ function getRegistrationNumberFromUrl() {
     const registrationNumber = parts[parts.length - 1];
 
     return registrationNumber;
+}
+
+// Функция для открытия модального окна отклонения
+function openRejectModal(e, id) {
+    currentRejectId = id;
+    currentEvent = e;
+
+    const modal = document.getElementById('rejectModal');
+    const textarea = document.getElementById('rejectReason');
+
+    // Сброс формы
+    textarea.value = '';
+    modal.style.display = 'block';
+
+    // Фокус на текстовом поле
+    setTimeout(() => textarea.focus(), 100);
+}
+
+// Функция для закрытия модального окна
+function closeRejectModal() {
+    const modal = document.getElementById('rejectModal');
+    modal.style.display = 'none';
+    currentRejectId = null;
+    currentEvent = null;
+}
+
+// Основная функция отклонения заявки
+async function RejectRequest(reason) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/request/reject/${currentRejectId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ comment: reason })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.status !== 'success') {
+            throw new Error(data.message || 'Ошибка запроса');
+        }
+
+        // Скрываем кнопки (как в оригинальной функции)
+        const buttonContainer = currentEvent.target.closest('div');
+        const buttons = buttonContainer.querySelectorAll('a, button');
+
+        buttons.forEach(button => {
+            if (!button.classList.contains('btn-view-details')) {
+                button.style.display = 'none';
+            }
+        });
+
+        showNotification('Заявка отклонена', 'success');
+        closeRejectModal();
+        document.location.reload();
+    } catch (error) {
+        console.error('Ошибка при отклонении заявки:', error);
+        showNotification('Ошибка при отклонении заявки', 'error');
+    }
+}
+
+async function ConfirmRequest(e, id) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/request/approve/${id}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.status !== 'success') {
+            throw new Error(data.message || 'Ошибка запроса');
+        }
+
+        const buttonContainer = e.target.closest('div');
+        const buttons = buttonContainer.querySelectorAll('a, button');
+
+        buttons.forEach(button => {
+            if (!button.classList.contains('btn-view-details')) {
+                button.style.display = 'none';
+            }
+        });
+
+        showNotification('Заявка успешно утверждена', 'success');
+        document.location.reload();
+
+    } catch (error) {
+        console.error('Ошибка утверждения заявки:', error);
+        showNotification('Ошибка утверждения заявки', 'error');
+    }
+}
+
+async function ExecuteRequest(e, id) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/request/execute/${id}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.status !== 'success') {
+            throw new Error(data.message || 'Ошибка запроса');
+        }
+
+        const buttonContainer = e.target.closest('div');
+        const buttons = buttonContainer.querySelectorAll('a, button');
+
+        buttons.forEach(button => {
+            if (!button.classList.contains('btn-view-details')) {
+                button.style.display = 'none';
+            }
+        });
+
+        showNotification('Заявка успешно выполнена', 'success');
+        document.location.reload();
+
+    } catch (error) {
+        console.error('Ошибка выполнения заявки:', error);
+        showNotification('Ошибка выполнения заявки', 'error');
+    }
 }
 
 // Загружаем детали заявки
@@ -19,6 +160,28 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         showNotification('Номер заявки не указан', 'error');
     }
+
+    const rejectModal = document.getElementById('rejectModal');
+    const rejectForm = document.getElementById('rejectForm');
+    const cancelReject = document.getElementById('cancelReject');
+    const closeBtnReject = rejectModal.querySelector('.close');
+
+    // Обработчик отправки формы
+    rejectForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const reason = document.getElementById('rejectReason').value.trim();
+
+        if (!reason) {
+            showNotification('Пожалуйста, укажите причину отклонения', 'warning');
+            return;
+        }
+
+        RejectRequest(reason);
+    });
+
+    // Обработчики закрытия модального окна
+    cancelReject.addEventListener('click', closeRejectModal);
+    closeBtnReject.addEventListener('click', closeRejectModal);
 
     // Элементы модального окна
     const userModal = document.getElementById('userModal');
@@ -41,6 +204,10 @@ document.addEventListener('DOMContentLoaded', function() {
     window.onclick = function(event) {
         if (event.target === modal) {
             modal.style.display = 'none';
+        }
+
+        if (event.target === rejectModal) {
+            closeRejectModal();
         }
     }
 
@@ -137,9 +304,63 @@ document.addEventListener('DOMContentLoaded', function() {
         const rights = data.rights;
 
         document.getElementById('requestDetails').style.display = 'block';
+        const actionPanel = document.getElementById('actionPanel');
+        const actionButtons = document.querySelector('.action-buttons-top');
+        let buttonsHTML = '';
+
+        if (rights.edit && request.rights.edit) {
+            actionPanel.style.display = 'block';
+            buttonsHTML += `
+                <a class="btn btn-edit" href="/request/${request.registration_number}/edit">
+                    <i class="fa-solid fa-pen-to-square"></i> Редактировать
+                </a>`;
+        }
+
+        if (rights.approve && request.rights.approve) {
+            actionPanel.style.display = 'block';
+            buttonsHTML += `
+                <button class="btn btn-approve" onclick="ConfirmRequest(event, '${request.registration_number}')">
+                    <i class="fa-solid fa-thumbs-up"></i> Утвердить
+                </button>`;
+        }
+
+        if (rights.redirect_management_department && request.rights.redirect_management_department) {
+            actionPanel.style.display = 'block';
+            buttonsHTML += `
+                <a class="btn btn-redirect" href="/request/${request.registration_number}/redirect/management">
+                    <i class="fa-solid fa-calendar-check"></i> Назначить сотрудника управления
+                </a>`;
+        }
+
+        if ((rights.reject_after && request.rights.reject_after) || (rights.reject_before && request.rights.reject_before)) {
+            actionPanel.style.display = 'block';
+            buttonsHTML += `
+                <button class="btn btn-reject" onclick="openRejectModal(event, '${request.registration_number}')">
+                    <i class="fa-solid fa-xmark"></i> Отклонить
+                </button>`;
+        }
+
+        if (rights.confirm_management_department && request.rights.confirm_management_department) {
+            actionPanel.style.display = 'block';
+            buttonsHTML += `
+                <button class="btn btn-ready" onclick="ExecuteRequest(event, '${request.registration_number}')">
+                    <i class="fa-solid fa-thumbs-up"></i> Подтвердить выполнение
+                </button>`;
+        }
+
+        if (rights.confirm_management && request.rights.confirm_management) {
+            actionPanel.style.display = 'block';
+            buttonsHTML += `
+                <button class="btn btn-ready" onclick="ExecuteRequest(event, '${request.registration_number}')">
+                    <i class="fa-solid fa-thumbs-up"></i> Завершить
+                </button>`;
+        }
+
+        actionButtons.innerHTML = buttonsHTML;
 
         // Заполняем данные
         document.getElementById('registrationNumber').textContent = request.registration_number;
+        document.getElementById('humanRegistrationNumber').textContent = request.human_registration_number;
         document.getElementById('regNumber').textContent = request.registration_number;
         document.getElementById('requestType').textContent = request.request_type.value;
         displayItems(request.items, request.rights, rights);
@@ -339,6 +560,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 descriptionsSection.appendChild(description);
             }
 
+            if (item.description_completed) {
+                const description = document.createElement('div');
+                description.className = 'description';
+                description.innerHTML = `<strong>Комментарий от исполнителя:</strong> ${item.description_completed}`;
+                descriptionsSection.appendChild(description);
+            }
+
             // Сборка карточки
             itemCard.appendChild(itemHeader);
             itemCard.appendChild(itemDetails);
@@ -463,7 +691,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Сбрасываем дополнительные поля
         document.getElementById('executionComment').value = '';
-        document.getElementById('executionDeadline').value = '20';
+        const deadlineInput = document.getElementById('executionDeadline');
+        const defaultDate = new Date();
+        defaultDate.setDate(defaultDate.getDate() + 20);
+
+        // Форматируем дату в формат YYYY-MM-DD для input type="date"
+        const formattedDate = defaultDate.toISOString().split('T')[0];
+        deadlineInput.value = formattedDate;
 
         // Загружаем исполнителей
         loadExecutors(executor);
@@ -545,27 +779,23 @@ document.addEventListener('DOMContentLoaded', function() {
         const itemId = modalName.dataset.itemId;
         const executor_flag = modalName.dataset.executor === 'true';
         const comment = document.getElementById('executionComment').value;
-        const deadlineDays = document.getElementById('executionDeadline').value;
+        const deadline = document.getElementById('executionDeadline').value;
 
         if (!executorId) {
             showNotification('Пожалуйста, выберите исполнителя', 'error');
             return;
         }
 
-        if (!deadlineDays || deadlineDays < 1) {
+        if (!deadline) {
             showNotification('Пожалуйста, укажите корректный срок исполнения', 'error');
             return;
         }
-
-        // Рассчитываем дату исполнения
-        const executionDate = new Date();
-        executionDate.setDate(executionDate.getDate() + parseInt(deadlineDays));
 
         const assignmentData = {
             item_id: itemId,
             user_role_id: executorId,
             description: comment,
-            deadline: executionDate.toISOString().split('T')[0],
+            deadline: deadline,
         };
 
         const registrationNumber = getRegistrationNumberFromUrl();

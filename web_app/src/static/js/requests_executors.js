@@ -10,14 +10,41 @@ let current_department = null;
 let current_type = null;
 let current_status= null;
 
-async function ExecuteRequest(e, id, item_id) {
+function openReadyModal(e, id, item_id) {
+    currentReadyRegisterNumber = id;
+    currentReadyItemId = item_id;
+
+    const modal = document.getElementById('readyModal');
+    const textarea = document.getElementById('readyComment');
+
+    // Сброс формы
+    textarea.value = '';
+    modal.style.display = 'block';
+
+    // Фокус на текстовом поле
+    setTimeout(() => textarea.focus(), 100);
+}
+
+function closeReadyModal() {
+    const modal = document.getElementById('readyModal');
+    modal.style.display = 'none';
+
+    currentReadyRegisterNumber = null;
+    currentReadyItemId = null;
+}
+
+async function ExecuteRequest() {
     try {
-        const response = await fetch(`${API_BASE_URL}/execute/${id}`, {
+        const comment = document.getElementById('readyComment').value.trim();
+        const response = await fetch(`${API_BASE_URL}/execute/${currentReadyRegisterNumber}`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({id: item_id})
+            body: JSON.stringify({
+                id: currentReadyItemId,
+                comment: comment
+            })
         });
 
         if (!response.ok) {
@@ -29,15 +56,6 @@ async function ExecuteRequest(e, id, item_id) {
         if (answer.status !== 'success') {
             throw new Error(answer.message || 'Ошибка запроса');
         }
-
-        const buttonContainer = e.target.closest('div');
-        const buttons = buttonContainer.querySelectorAll('a, button');
-
-        buttons.forEach(button => {
-            if (!button.classList.contains('btn-view-details')) {
-                button.style.display = 'none';
-            }
-        });
 
         showNotification('Заявка успешно выполнена', 'success');
         document.location.reload();
@@ -190,6 +208,7 @@ function displayRequests(data) {
 		row.classList.add(`tr-${request.actual_status}`);
         row.innerHTML = `
             <td>${request.registration_number}</td>
+            <td>${request.human_registration_number}</td>
             <td>${request.item.name}<br><span class="badge quantity-badge">${request.item.quantity} шт.</span></td>
             <td>${request.request_type.value}</td>
             <td>
@@ -203,7 +222,7 @@ function displayRequests(data) {
             <td>
                 <div style="display: flex; flex-direction: column; gap: 5px; width: max-content; text-align: center;">
                     ${rights.view && request.rights.view ? `
-                        <a class="btn-view-details" href="/request/${request.registration_number}">
+                        <a class="btn btn-view-details" href="/request/${request.registration_number}">
                             <i class="fas fa-eye"></i> Просмотр
                         </a>` : ''}
                     ${rights.planning && request.rights.planning ? `
@@ -212,7 +231,7 @@ function displayRequests(data) {
                             <i class="fa-solid fa-pen-to-square"></i> В планирование
                         </button>` : ''}
                     ${rights.ready && request.rights.ready ? `
-                        <button class="btn-ready" onclick="ExecuteRequest(event, '${request.registration_number}', ${request.item.id})">
+                        <button class="btn-ready" onclick="openReadyModal(event, '${request.registration_number}', ${request.item.id})">
                             <i class="fa-solid fa-thumbs-up"></i> Готово
                         </button> ` : ''}
                 </div>
@@ -341,10 +360,29 @@ document.addEventListener('DOMContentLoaded', function() {
     cancelBtnPlanning.onclick = closePlanningModal;
     addBtnPlanning.onclick = addToPlanning;
 
+    const readyModal = document.getElementById('readyModal');
+    const readyForm = document.getElementById('readyForm');
+    const cancelReady = document.getElementById('cancelReady');
+    const closeBtnReady = readyModal.querySelector('.close');
+
+    // Обработчик отправки формы
+    readyForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        ExecuteRequest();
+    });
+
+    // Обработчики закрытия модального окна
+    cancelReady.addEventListener('click', closeReadyModal);
+    closeBtnReady.addEventListener('click', closeReadyModal);
+
     // Закрытие при клике вне модального окна
     window.addEventListener('click', function(e) {
         if (e.target === modalPlanning) {
             closePlanningModal();
+        }
+
+        if (e.target === readyModal) {
+            closeReadyModal();
         }
     });
 });

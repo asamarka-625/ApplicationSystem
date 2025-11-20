@@ -23,8 +23,8 @@ class RequestStatus(Enum):
 
 # Enum для типа заявки
 class RequestType(Enum):
-    MATERIAL = "материально-техническое обеспечение"
-    TECHNICAL = "техническое обслуживание"
+    MATERIAL = "материалы"
+    TECHNICAL = "услуги"
 
 # Enum для действий, которые можно делать с заявкой
 class RequestAction(Enum):
@@ -54,8 +54,8 @@ STATUS_MAPPING = {
 }
 
 TYPE_MAPPING = {
-    "материально-техническое обеспечение": RequestType.MATERIAL,
-    "техническое обслуживание": RequestType.TECHNICAL,
+    "материалы": RequestType.MATERIAL,
+    "услуги": RequestType.TECHNICAL,
 }
 
 STATUS_ID_MAPPING = [{"id": i, "name": name.capitalize()} for i, name in enumerate(STATUS_MAPPING.keys())]
@@ -72,6 +72,11 @@ class Request(Base):
         unique=True,
         index=True,
         nullable=False
+    )
+    human_registration_number: so.Mapped[str] = so.mapped_column(
+        sa.String,
+        unique=True,
+        nullable=True
     )
     description: so.Mapped[Optional[str]] = so.mapped_column(sa.Text, nullable=True)
     description_management_department: so.Mapped[Optional[str]] = so.mapped_column(sa.Text, nullable=True)

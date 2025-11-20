@@ -50,7 +50,7 @@ async function loadCreateInfo() {
 function isMaintenanceSupport(requestTypeId) {
     const selectedType = requestTypes.find(type => type.id == requestTypeId);
     return selectedType && (
-        selectedType.name.toLowerCase().includes('техническое обслуживание')
+        selectedType.name.toLowerCase().includes('услуги')
     );
 }
 
@@ -510,10 +510,7 @@ async function handleRequestSubmit(e) {
 
         if (response.ok) {
             showNotification('Заявка успешно обновлена!');
-            const updatedData = await loadRequestData();
-            if (updatedData) {
-                populateFormWithData(updatedData);
-            }
+            window.location.href = `/request/${registrationNumber}`;
         } else {
             const errorText = await response.text();
             throw new Error(errorText || 'Ошибка обновления заявки');

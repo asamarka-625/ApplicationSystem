@@ -127,6 +127,7 @@ function displayRequests(data) {
 		row.classList.add(`tr-${request.actual_status}`);
         row.innerHTML = `
             <td>${request.registration_number}</td>
+            <td>${request.human_registration_number}</td>
             <td>${request.item.name}<br><span class="badge quantity-badge">${request.item.quantity} шт.</span></td>
             <td>${request.request_type.value}</td>
             <td>${formatDate(request.deadline)}</td>
@@ -134,7 +135,7 @@ function displayRequests(data) {
             <td>
                 <div style="display: flex; flex-direction: column; gap: 5px; width: max-content; text-align: center;">
                     ${rights.view && request.rights.view ? `
-                        <a class="btn-view-details" href="/request/${request.registration_number}">
+                        <a class="btn btn-view-details" href="/request/${request.registration_number}">
                             <i class="fas fa-eye"></i> Просмотр
                         </a>` : ''}
                     ${rights.ready && request.rights.ready ? `
