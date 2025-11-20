@@ -173,7 +173,7 @@ async def sql_get_user_by_username(
         return user
 
     except NoResultFound:
-        config.logger.info(f"User not found by ID: {username}")
+        config.logger.info(f"User not found by username: {username}")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     except SQLAlchemyError as e:

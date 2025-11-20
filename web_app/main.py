@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqladmin import Admin
+from prometheus_fastapi_instrumentator import Instrumentator
 # Внутренние модули
 from web_app.src.core import config, engine, setup_database
 from web_app.src.routers import router
@@ -54,6 +55,11 @@ app.add_middleware(
 
 app.add_middleware(AuthenticationMiddleware, login_url="/login")
 
+# Метрики /metrics
+instrumentator = Instrumentator()
+instrumentator.instrument(app).expose(app)
+
+# Админка
 admin = Admin(app, engine, authentication_backend=authentication_backend)
 admin.add_view(UserAdmin)
 admin.add_view(SecretaryAdmin)
@@ -67,6 +73,7 @@ admin.add_view(CategoryAdmin)
 admin.add_view(ItemAdmin)
 admin.add_view(DepartmentAdmin)
 admin.add_view(RequestAdmin)
+
 
 if __name__ == '__main__':
     import uvicorn

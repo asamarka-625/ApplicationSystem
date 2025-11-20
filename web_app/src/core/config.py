@@ -63,7 +63,9 @@ class Config:
     
     def __post_init__(self):
         self.logger = setup_logger(
-            level=os.getenv("LOG_LEVEL", "INFO")
+            level=os.getenv("LOG_LEVEL", "INFO"),
+            log_dir=os.getenv("LOG_DIR", "logs"),
+            log_file=os.getenv("LOG_FILE", "web_log")
         )
 
         self.validate()
