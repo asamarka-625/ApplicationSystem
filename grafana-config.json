@@ -24,7 +24,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 3,
+  "id": 1,
   "links": [],
   "panels": [
     {
@@ -296,16 +296,19 @@
       },
       "id": 2,
       "options": {
-        "dedupStrategy": "none",
+        "dedupStrategy": "signature",
+        "detailsMode": "inline",
         "enableInfiniteScrolling": false,
-        "enableLogDetails": true,
+        "enableLogDetails": false,
+        "fontSize": "default",
         "prettifyLogMessage": false,
         "showCommonLabels": false,
         "showControls": false,
         "showLabels": false,
         "showTime": false,
         "sortOrder": "Descending",
-        "wrapLogMessage": true
+        "syntaxHighlighting": false,
+        "wrapLogMessage": false
       },
       "pluginVersion": "12.3.0",
       "targets": [
@@ -316,7 +319,7 @@
           },
           "direction": "backward",
           "editorMode": "code",
-          "expr": "{service_name=\"WebApp-logs\"} | json | line_format \"{{.log}}\"",
+          "expr": "{job=\"WebApp-logs\"} | json | line_format `{{.log}}` |~ `(GET|POST|PUT|DELETE|PATCH) /`",
           "hide": false,
           "queryType": "range",
           "refId": "A"
@@ -1109,7 +1112,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "http Observability",
+  "title": "my app",
   "uid": "http-observability",
-  "version": 22
+  "version": 10
 }
