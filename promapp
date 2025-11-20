@@ -24,7 +24,7 @@ server {
     }
 
     location /static/ {
-        alias /root/ApplicationSystem/web_app/src/static/;
+        alias /var/ApplicationSystem/web_app/src/static/;
         #access_log off;
         add_header Cache-Control "public, immutable";
         autoindex off;
