@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/css/all.min.css">
     <link rel="stylesheet" href="/static/css/styles.css">
     {% if page in ("create", "edit") %}
     <link rel="stylesheet" href="/static/css/create.css">
     {% elif page == "detail" %}
     <link rel="stylesheet" href="/static/css/detail.css">
     {% endif %}
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
     <!-- Шапка -->
