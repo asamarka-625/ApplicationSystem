@@ -12,6 +12,7 @@ services:
         condition: service_healthy
     volumes:
       - ./logs:/app/logs
+      - ./web_app/src/static/user_documents:/app/web_app/src/static/user_documents
     env_file:
       - .env
     logging:

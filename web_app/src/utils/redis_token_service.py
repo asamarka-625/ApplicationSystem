@@ -101,14 +101,19 @@ class TokenService:
         await self.redis.setex(
             key,
             24 * 3600,
-            user_id
+            str(user_id)
         )
 
     async def get_reset_password_token(self, token: str) -> Optional[int]:
-        """Получение токена для смены пароля пользователя в Redis"""
+        """Получение токена для смены пароля пользователя в Redis с удалением после извлечения"""
         key = f"{self.reset_password}{token}"
-        user_id = await self.redis.exists(key)
-        return user_id
+
+        async with self.redis.pipeline(transaction=True) as pipe:
+            user_id = await pipe.get(key).delete(key).execute()
+
+        if user_id[0] is not None:
+            return int(user_id[0])
+        return None
 
     async def get_stats(self) -> dict:
         """Статистика аутентификаций"""

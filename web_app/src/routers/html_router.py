@@ -180,7 +180,7 @@ async def reset_password(
 ):
     # Проверяем токен
     user_id = await token_service.get_reset_password_token(token)
-    if user_id is None:
+    if user_id is None or not user_id.isdigit():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Неверный или просроченный токен"
@@ -189,7 +189,7 @@ async def reset_password(
     new_password = generate_password(length=8)
 
     user_name = await sql_update_password_user_by_id(
-        user_id=user_id,
+        user_id=int(user_id),
         password=new_password
     )
 
