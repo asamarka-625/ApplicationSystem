@@ -29,16 +29,19 @@ class Department(Base):
     # Связи
     requests: so.Mapped[List["Request"]] = so.relationship(
         "Request",
-        back_populates="department"
+        back_populates="department",
+        cascade="all, delete-orphan"
     )
     # Связи
     judges: so.Mapped[List["Judge"]] = so.relationship(
         "Judge",
-        back_populates="department"
+        back_populates="department",
+        cascade="all, delete-orphan"
     )
     secretaries: so.Mapped[List["Secretary"]] = so.relationship(
         "Secretary",
-        back_populates="department"
+        back_populates="department",
+        cascade="all, delete-orphan"
     )
 
     def __repr__(self):

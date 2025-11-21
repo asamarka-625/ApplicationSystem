@@ -7,6 +7,7 @@ from wtforms.validators import InputRequired, ValidationError
 # Внутренние модули
 from web_app.src.models import Department
 from web_app.src.utils import validate_phone_list
+from web_app.src.crud import sql_delete_role_users_by_department_id
 
 
 class DepartmentAdmin(ModelView, model=Department):
@@ -148,3 +149,7 @@ class DepartmentAdmin(ModelView, model=Department):
             validate_phone_list(phone_numbers)
 
         return await super().on_model_change(data, model, is_created, request)
+
+    async def on_model_delete(self, model, request):
+        if model:
+            await sql_delete_role_users_by_department_id(department_id=model.id)
