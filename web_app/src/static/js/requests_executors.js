@@ -226,12 +226,12 @@ function displayRequests(data) {
                             <i class="fas fa-eye"></i> Просмотр
                         </a>` : ''}
                     ${rights.planning && request.rights.planning ? `
-                        <button class="btn-planning"
+                        <button class="btn btn-planning"
                         onclick="openPlanningModal('${request.registration_number}', ${request.item.id}, '${request.item.name.replace('\n', ' ')}', ${request.item.quantity})">
                             <i class="fa-solid fa-pen-to-square"></i> В планирование
                         </button>` : ''}
                     ${rights.ready && request.rights.ready ? `
-                        <button class="btn-ready" onclick="openReadyModal(event, '${request.registration_number}', ${request.item.id})">
+                        <button class="btn btn-ready" onclick="openReadyModal(event, '${request.registration_number}', ${request.item.id})">
                             <i class="fa-solid fa-thumbs-up"></i> Готово
                         </button> ` : ''}
                 </div>

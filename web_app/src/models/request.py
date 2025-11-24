@@ -168,15 +168,18 @@ class Request(Base):
     related_documents: so.Mapped[List["RequestDocument"]] = so.relationship(
         "RequestDocument",
         back_populates="request",
+        cascade="all, delete-orphan"
     )
     history: so.Mapped[List["RequestHistory"]] = so.relationship(
         "RequestHistory",
         back_populates="request",
+        cascade="all, delete-orphan"
     )
     item_associations: so.Mapped[List["RequestItem"]] = so.relationship(
         "RequestItem",
         back_populates="request",
-        viewonly=True
+        viewonly=True,
+        cascade="all, delete-orphan"
     )
 
     def __repr__(self):

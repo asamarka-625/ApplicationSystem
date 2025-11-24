@@ -132,13 +132,19 @@ async def sql_create_request(
         new_request.human_registration_number = f"{new_request.id}-{department_code}-{datetime.now().year}"
 
         if data.items:
+            processed_items = {}
             for item in data.items:
-                # Связываем предметы с заявкой
-                await session.execute(request_item.insert().values(
-                    request_id=new_request.id,
-                    item_id=item.id,
-                    count=item.quantity
-                ))
+                if processed_items.get(item.id) is None:
+                    processed_items[item.id] = {
+                        "request_id": new_request.id,
+                        "item_id": item.id,
+                        "count": item.quantity
+                    }
+                else:
+                    processed_items[item.id]["count"] += item.quantity
+
+            # Связываем предметы с заявкой
+            await session.execute(request_item.insert().values(tuple(processed_items.values())))
 
         if data.attachments:
             for attachment in data.attachments:
@@ -188,7 +194,7 @@ async def sql_get_requests_by_user(
     try:
         query = (
             sa.select(Request)
-        ).offset((page - 1) * page_size).limit(page_size).order_by(Request.created_at)
+        ).offset((page - 1) * page_size).limit(page_size).order_by(Request.created_at.desc())
 
         if user.is_secretary:
             query = query.where(Request.secretary_id == user.secretary_profile.id)
@@ -308,7 +314,7 @@ async def sql_get_requests_for_executor(
             sa.select(Request)
             .options(
                 so.selectinload(Request.item_associations).joinedload(RequestItem.item)
-            ).offset((page - 1) * page_size).limit(page_size).order_by(Request.created_at)
+            ).offset((page - 1) * page_size).limit(page_size).order_by(Request.created_at.desc())
         )
 
         conditions = []

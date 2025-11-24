@@ -60,4 +60,26 @@
         </div>
     </div>
 </section>
+<div id="readyModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Подтверждение готовности заявки</h2>
+        <form id="readyForm">
+            <div class="form-group">
+                <label for="readyComment">Комментарий:</label>
+                <textarea
+                    id="readyComment"
+                    name="reason"
+                    rows="4"
+                    placeholder="Укажите комментарий к заявке..."
+                    required
+                ></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="cancelReady">Отмена</button>
+                <button type="submit" class="btn btn-primary" id="confirmReady">Подтвердить готовность</button>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}

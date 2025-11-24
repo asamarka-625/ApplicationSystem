@@ -1,0 +1,9 @@
+# Virtual Environment
+.venv/
+
+# Python
+__pycache__/
+
+# Alembic
+alembic/
+alembic.ini

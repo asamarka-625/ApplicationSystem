@@ -6,34 +6,52 @@ let pageSize = 10;
 let totalItems = 0;
 let totalPages = 0;
 
-async function ExecuteRequest(e, registration_number, item_id) {
+function openReadyModal(e, id, item_id) {
+    currentReadyRegisterNumber = id;
+    currentReadyItemId = item_id;
+
+    const modal = document.getElementById('readyModal');
+    const textarea = document.getElementById('readyComment');
+
+    // Сброс формы
+    textarea.value = '';
+    modal.style.display = 'block';
+
+    // Фокус на текстовом поле
+    setTimeout(() => textarea.focus(), 100);
+}
+
+function closeReadyModal() {
+    const modal = document.getElementById('readyModal');
+    modal.style.display = 'none';
+
+    currentReadyRegisterNumber = null;
+    currentReadyItemId = null;
+}
+
+async function ExecuteRequest() {
     try {
-        const response = await fetch(`${API_BASE_URL}/execute/${registration_number}`, {
+        const comment = document.getElementById('readyComment').value.trim();
+        const response = await fetch(`${API_BASE_URL}/execute/${currentReadyRegisterNumber}`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({id: item_id})
+            body: JSON.stringify({
+                id: currentReadyItemId,
+                comment: comment
+            })
         });
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const data = await response.json();
+        const answer = await response.json();
 
-        if (data.status !== 'success') {
-            throw new Error(data.message || 'Ошибка запроса');
+        if (answer.status !== 'success') {
+            throw new Error(answer.message || 'Ошибка запроса');
         }
-
-        const buttonContainer = e.target.closest('div');
-        const buttons = buttonContainer.querySelectorAll('a, button');
-
-        buttons.forEach(button => {
-            if (!button.classList.contains('btn-view-details')) {
-                button.style.display = 'none';
-            }
-        });
 
         showNotification('Заявка успешно выполнена', 'success');
         document.location.reload();
@@ -139,7 +157,7 @@ function displayRequests(data) {
                             <i class="fas fa-eye"></i> Просмотр
                         </a>` : ''}
                     ${rights.ready && request.rights.ready ? `
-                        <button class="btn-ready" onclick="ExecuteRequest(event, '${request.registration_number}', ${request.item.id})">
+                        <button class="btn btn-ready" onclick="openReadyModal(event, '${request.registration_number}', ${request.item.id})">
                             <i class="fa-solid fa-thumbs-up"></i> Готово
                         </button> ` : ''}
                 </div>
@@ -248,5 +266,27 @@ document.addEventListener('DOMContentLoaded', function() {
         pageSize = parseInt(e.target.value);
         currentPage = 1; // Сбрасываем на первую страницу
         loadRequests(currentPage);
+    });
+
+    const readyModal = document.getElementById('readyModal');
+    const readyForm = document.getElementById('readyForm');
+    const cancelReady = document.getElementById('cancelReady');
+    const closeBtnReady = readyModal.querySelector('.close');
+
+    // Обработчик отправки формы
+    readyForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        ExecuteRequest();
+    });
+
+    // Обработчики закрытия модального окна
+    cancelReady.addEventListener('click', closeReadyModal);
+    closeBtnReady.addEventListener('click', closeReadyModal);
+
+    // Закрытие при клике вне модального окна
+    window.addEventListener('click', function(e) {
+        if (e.target === readyModal) {
+            closeReadyModal();
+        }
     });
 });
