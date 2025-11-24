@@ -1,3 +1,6 @@
+# Project
+.idea
+
 # Virtual Environment
 .venv/
 
@@ -7,3 +10,4 @@ __pycache__/
 # Alembic
 alembic/
 alembic.ini
+
