@@ -77,43 +77,6 @@ async function RejectRequest(reason) {
     }
 }
 
-async function ConfirmRequest(e, id) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/request/approve/${id}`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        if (data.status !== 'success') {
-            throw new Error(data.message || 'Ошибка запроса');
-        }
-
-        const buttonContainer = e.target.closest('div');
-        const buttons = buttonContainer.querySelectorAll('a, button');
-
-        buttons.forEach(button => {
-            if (!button.classList.contains('btn-view-details')) {
-                button.style.display = 'none';
-            }
-        });
-
-        showNotification('Заявка успешно утверждена', 'success');
-        document.location.reload();
-
-    } catch (error) {
-        console.error('Ошибка утверждения заявки:', error);
-        showNotification('Ошибка утверждения заявки', 'error');
-    }
-}
-
 async function ExecuteRequest(e, id) {
     try {
         const response = await fetch(`${API_BASE_URL}/request/execute/${id}`, {
@@ -319,9 +282,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (rights.approve && request.rights.approve) {
             actionPanel.style.display = 'block';
             buttonsHTML += `
-                <button class="btn btn-approve" onclick="ConfirmRequest(event, '${request.registration_number}')">
+                <a class="btn btn-approve" href="/signature/${request.registration_number}">
                     <i class="fa-solid fa-thumbs-up"></i> Утвердить
-                </button>`;
+                </a>`;
         }
 
         if (rights.redirect_management_department && request.rights.redirect_management_department) {
