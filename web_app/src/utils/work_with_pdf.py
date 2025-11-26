@@ -143,7 +143,7 @@ def generate_pdf_with_emblem(filename: str, signature_data: DucumentEmblem) -> D
 def validate_pdf_file(file_content: bytes, filename: str) -> None:
     # Проверяем расширение файла
     file_extension = os.path.splitext(filename)[1].lower()
-    print("file_extension", file_extension)
+
     if file_extension != ".pdf":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -158,7 +158,7 @@ def validate_pdf_file(file_content: bytes, filename: str) -> None:
     except:
         # Если не удалось определить MIME, используем расширение как fallback
         detected_mime = None
-    print("detected_mime", detected_mime)
+
     if detected_mime != "application/octet-stream":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

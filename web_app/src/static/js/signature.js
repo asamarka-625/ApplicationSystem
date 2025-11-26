@@ -4,6 +4,7 @@ const API_BASE = '/api/v1/signature';
 let registrationNumber = null;
 let currentFileUrl = null;
 let selectedCertificateIndex = null;
+let currentCertThumbprint = null;
 let certificates = [];
 let cadespluginLoaded = false;
 
@@ -31,6 +32,8 @@ function initializePlugin() {
         statusDiv.innerHTML = '<div class="status success">Плагин успешно инициализирован!</div>';
         document.getElementById('loadCertsBtn').disabled = false;
         getRegistrationNumberFromUrl();
+        backRequest.href = `/request/${registrationNumber}`;
+
     }).catch(function(err) {
         statusDiv.innerHTML = `<div class="status error">Ошибка инициализации плагина: ${err.message}</div>`;
     });
@@ -138,6 +141,12 @@ async function selectCertificate(index) {
     certItems[index].classList.add('selected');
 
     const certInfo = certificates[index];
+
+    cadesplugin.async_spawn(function*() {
+        const cert = certInfo.certificate;
+        currentCertThumbprint = yield cert.Thumbprint;
+    });
+
     document.getElementById('certStatus').innerHTML =
         `<div class="status success">Выбран сертификат: ${certInfo.subjectName}</div>`;
 
@@ -148,7 +157,7 @@ async function selectCertificate(index) {
 }
 
 // Генерация PDF
-async function generatePDF(owner, publisher, Thumbprint, valid_from, valid_until) {
+async function generatePDF(owner, publisher, valid_from, valid_until) {
     const statusDiv = document.getElementById('signStatus');
     try {
         statusDiv.innerHTML = '<div class="status info">Генерация документа...</div>';
@@ -162,7 +171,7 @@ async function generatePDF(owner, publisher, Thumbprint, valid_from, valid_until
             body: JSON.stringify({
                 owner: owner,
                 publisher: publisher,
-                Thumbprint: Thumbprint,
+                Thumbprint: currentCertThumbprint,
                 valid_from: valid_from,
                 valid_until: valid_until
             })
@@ -195,14 +204,11 @@ async function signPDF() {
 
     const certInfo = certificates[selectedCertificateIndex];
 
+    await generatePDF(certInfo.subjectName, certInfo.issuerName, certInfo.validFrom, certInfo.validTo);
+
     cadesplugin.async_spawn(function*() {
         try {
             let cert = certInfo.certificate;
-            // Получаем информацию о сертификате для диагностики
-            let certSubject = yield cert.SubjectName;
-            let certThumbprint = yield cert.Thumbprint;
-
-            await generatePDF(certInfo.subjectName, certInfo.issuerName, certThumbprint, certInfo.validFrom, certInfo.validTo);
 
             var fileData = yield loadFileFromUrl(currentFileUrl);
 
@@ -253,7 +259,7 @@ async function signPDF() {
             for (var i = 0; i < binaryString.length; i++) {
                 bytes[i] = binaryString.charCodeAt(i);
             }
-            var blob = new Blob([bytes], { type: 'application/pdf' });
+            var blob = new Blob([bytes], { type: 'application/octet-stream' });
 
             // Создаем FormData для отправки файла
             var formData = new FormData();
@@ -274,7 +280,9 @@ async function signPDF() {
             })
             .then(result => {
                 const downloadBtn = document.getElementById("downloadBtn");
-                downloadBtn.onclick = downloadSignedPDF(result.file_url);
+                downloadBtn.addEventListener("click", function() {
+                    window.open(result.file_url, '_blank');
+                });
                 downloadBtn.disabled = false;
                 statusDiv.innerHTML += '<div class="status info">Документ успешно подписан</div>';
                 return result;
@@ -322,16 +330,6 @@ function loadFileFromUrl(url) {
 
         xhr.send();
     });
-}
-
-function downloadSignedPDF(url) {
-    // Создаем ссылку для скачивания
-    var a = document.createElement('a');
-    a.href = url;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
 }
 
 // Функция для извлечения имени файла из URL
