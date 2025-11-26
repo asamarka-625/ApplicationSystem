@@ -34,7 +34,7 @@ class Config:
     MAINTENANCE_ITEM_ID: int = field(default_factory=lambda: os.getenv("MAINTENANCE_ITEM_ID"))
     USER_DOCUMENTS: str = "web_app/src/static/user_documents"
     PDF_REQUESTS: str = "web_app/src/static/pdf_requests"
-    FONTS_PATH: str = "web_app/src/static/fonts/arial.ttf"
+    FONT_PATH: str = "web_app/src/static/fonts/arial.ttf"
 
     ALLOWED_MIME_TYPES: Dict[str, List[str]] = field(default_factory=lambda: {
         'image': [

@@ -21,7 +21,6 @@ from web_app.src.schemas import DocumentResponse, DucumentEmblem
 
 # Генерирует PDF с данными по предметам заявки
 def generate_pdf(data: Dict[str, Any], filename: str) -> DocumentResponse:
-
     pdfmetrics.registerFont(TTFont('CustomFont', config.FONT_PATH))
 
     # Загружаем шаблон из файла
