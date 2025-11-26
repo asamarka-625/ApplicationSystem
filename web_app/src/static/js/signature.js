@@ -284,7 +284,7 @@ async function signPDF() {
                     window.open(result.file_url, '_blank');
                 });
                 downloadBtn.disabled = false;
-                statusDiv.innerHTML += '<div class="status info">Документ успешно подписан</div>';
+                statusDiv.innerHTML = '<div class="status info">Документ успешно подписан</div>';
                 return result;
             })
             .catch(error => {
@@ -292,7 +292,7 @@ async function signPDF() {
             });
 
         } catch (exc) {
-            statusDiv.innerHTML += `<div class="status info">${exc}</div>`;
+            statusDiv.innerHTML = `<div class="status info">${exc}</div>`;
         }
     });
 }
