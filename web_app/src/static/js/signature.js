@@ -283,7 +283,7 @@ async function signPDF() {
                 document.getElementById("loadCertsBtn").disabled = true;
                 document.getElementById("signBtn").disabled = true;
                 document.getElementById("certificatesList").style.display = 'none';
-                statusDiv.innerHTML = '<div class="status info">Документ успешно подписан</div>';
+                statusDiv.innerHTML = '<div class="status success">Документ успешно подписан</div>';
                 return result;
             })
             .catch(error => {
@@ -291,7 +291,7 @@ async function signPDF() {
             });
 
         } catch (exc) {
-            statusDiv.innerHTML = `<div class="status info">${exc}</div>`;
+            statusDiv.innerHTML = `<div class="status error">${exc}</div>`;
         }
     });
 }
