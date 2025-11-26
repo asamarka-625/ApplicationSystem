@@ -51,7 +51,7 @@ def generate_pdf(data: Dict[str, Any], filename: str) -> DocumentResponse:
     doc.build(story)
 
     return DocumentResponse(
-        file_url=file_path.replace("web_app", "")
+        file_url=file_path.replace("web_app/src", "")
     )
 
 
@@ -84,8 +84,8 @@ def create_signature_layer(signature_data: DucumentEmblem, page_size=A4):
     signature_info = [
         f"Подписано: {signature_data.owner}",
         f"Издатель: {signature_data.publisher}",
-        f"Срок действия от: {signature_data.valid_from}",
-        f"Срок действия до: {signature_data.valid_until}"
+        f"Срок действия от: {signature_data.valid_from.strftime('%d-%m-%Y')}",
+        f"Срок действия до: {signature_data.valid_until.strftime('%d-%m-%Y')}"
     ]
 
     for info in signature_info:
@@ -134,7 +134,7 @@ def generate_pdf_with_emblem(filename: str, signature_data: DucumentEmblem) -> D
         writer.write(f)
 
     return DocumentResponse(
-        file_url=output_pdf_path.replace("web_app", "")
+        file_url=output_pdf_path.replace("web_app/src", "")
     )
 
 
@@ -142,6 +142,7 @@ def generate_pdf_with_emblem(filename: str, signature_data: DucumentEmblem) -> D
 def validate_pdf_file(file_content: bytes, filename: str) -> None:
     # Проверяем расширение файла
     file_extension = os.path.splitext(filename)[1].lower()
+    print("file_extension", file_extension)
     if file_extension != ".pdf":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -156,8 +157,8 @@ def validate_pdf_file(file_content: bytes, filename: str) -> None:
     except:
         # Если не удалось определить MIME, используем расширение как fallback
         detected_mime = None
-
-    if detected_mime != "application/pdf":
+    print("detected_mime", detected_mime)
+    if detected_mime != "application/octet-stream":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Тип файла не поддерживается"
@@ -188,5 +189,5 @@ async def save_pdf_signed(file: UploadFile, filename: str) -> DocumentResponse:
         os.remove(temp_file_path)
 
     return DocumentResponse(
-        file_url=file_path.replace("web_app", "")
+        file_url=file_path.replace("web_app/src", "")
     )

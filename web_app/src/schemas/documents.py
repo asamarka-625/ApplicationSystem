@@ -1,6 +1,6 @@
 # Внешние зависимости
 from typing import Annotated
-from datetime import date
+from datetime import datetime
 from pydantic import BaseModel, Field
 # Внутренние модули
 
@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field
 class DucumentEmblem(BaseModel):
     owner: Annotated[str, Field(strict=True, strip_whitespace=True)]
     publisher: Annotated[str, Field(strict=True, strip_whitespace=True)]
-    valid_from: date
-    valid_until: date
+    valid_from: datetime
+    valid_until: datetime
 
 
 # Схема возвращаемых данных о файле pdf

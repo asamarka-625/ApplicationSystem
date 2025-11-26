@@ -108,7 +108,7 @@ function loadCertificates() {
                         <strong>Приватный ключ:</strong> ${hasPrivateKey ? '✅ Доступен' : '❌ Недоступен'}
                         <br><br>
                         ${hasPrivateKey ?
-                            `<button onclick="selectCertificate(${i - 1})" style="background: #28a745;">Выбрать для подписания</button>` :
+                            `<button onclick="selectCertificate(${i - 1})" class="btn btn-ready">Выбрать для подписания</button>` :
                             `<button disabled>Ключ недоступен</button>`
                         }
                     `;
@@ -140,11 +140,16 @@ async function selectCertificate(index) {
     const certInfo = certificates[index];
     document.getElementById('certStatus').innerHTML =
         `<div class="status success">Выбран сертификат: ${certInfo.subjectName}</div>`;
+
+    // Активируем кнопку подписания если выбран сертификат
+    if (selectedCertificateIndex !== null) {
+        document.getElementById('signBtn').disabled = false;
+    }
 }
 
 // Генерация PDF
 async function generatePDF(owner, publisher, valid_from, valid_until) {
-    const statusDiv = document.getElementById('generateStatus');
+    const statusDiv = document.getElementById('signStatus');
     try {
         statusDiv.innerHTML = '<div class="status info">Генерация документа...</div>';
 
@@ -152,13 +157,14 @@ async function generatePDF(owner, publisher, valid_from, valid_until) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                body: JSON.stringify({
-                    owner: owner,
-                    publisher: publisher,
-                    valid_from: valid_from,
-                    valid_until: valid_until
-                })
-            }
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                owner: owner,
+                publisher: publisher,
+                valid_from: valid_from,
+                valid_until: valid_until
+            })
         });
 
         if (!response.ok) {
@@ -168,13 +174,8 @@ async function generatePDF(owner, publisher, valid_from, valid_until) {
         const data = await response.json();
         currentFileUrl = data.file_url;
         statusDiv.innerHTML = `<div class="status success">
-            Документ создан! ID: ${data.document_id}
+            Запрос отправлен на сервер
         </div>`;
-
-        // Активируем кнопку подписания если выбран сертификат
-        if (selectedCertificateIndex !== null) {
-            document.getElementById('signBtn').disabled = false;
-        }
 
     } catch (error) {
         statusDiv.innerHTML = `<div class="status error">Ошибка: ${error.message}</div>`;
@@ -182,8 +183,8 @@ async function generatePDF(owner, publisher, valid_from, valid_until) {
 }
 
 // Подписание PDF (обновленная версия по примеру из статьи)
-function signPDF() {
-    if (selectedCertificateIndex === null || !currentDocumentId) {
+async function signPDF() {
+    if (selectedCertificateIndex === null) {
         alert('Сначала выберите сертификат и сгенерируйте документ');
         return;
     }
@@ -201,22 +202,13 @@ function signPDF() {
             // Получаем информацию о сертификате для диагностики
             let certSubject = yield cert.SubjectName;
             let certThumbprint = yield cert.Thumbprint;
+            console.log("Сертификат", certThumbprint);
 
             var fileData = yield loadFileFromUrl(currentFileUrl);
 
             var oSigner = yield cadesplugin.CreateObjectAsync("CAdESCOM.CPSigner");
             yield oSigner.propset_Certificate(cert);
             yield oSigner.propset_CheckCertificate(true);
-
-            var oSignature = yield cadesplugin.CreateObjectAsync("CAdESCOM.CPSignature");
-
-            // Настраиваем параметры визуальной подписи
-            yield oSignature.propset_Reason("Документ подписан электронной подписью");
-            yield oSignature.propset_Location("Москва");
-            yield oSignature.propset_ContactInfo("email@example.com");
-
-            // Привязываем визуальное представление к подписанту
-            yield oSigner.propset_Signature(oSignature);
 
             var oSignedData = yield cadesplugin.CreateObjectAsync("CAdESCOM.CadesSignedData");
             yield oSignedData.propset_ContentEncoding(cadesplugin.CADESCOM_BASE64_TO_BINARY);
@@ -243,20 +235,20 @@ function signPDF() {
                     cadesplugin.CADESCOM_CADES_BES,
                     false
                 );
-                alert("Signature verified successfully for file: " + fileName);
+                alert("Signature verified successfully for file: ");
             } catch (err) {
                 alert("Failed to verify signature. Error: " + cadesplugin.getLastError(err));
                 return;
             }
 
             // Отправляем подпись на сервер для верификации и сохранения
-            statusDiv.innerHTML += '<div class="status info">Отправка подписи на сервер...</div>';
+            statusDiv.innerHTML = '<div class="status info">Отправка подписи на сервер...</div>';
 
             var fileName = getFileNameFromUrl(currentFileUrl);
             var signedFileName = "signed_" + fileName;
 
             // Создаем blob из base64 данных
-            var binaryString = atob(pdfData);
+            var binaryString = atob(sSignedMessage);
             var bytes = new Uint8Array(binaryString.length);
             for (var i = 0; i < binaryString.length; i++) {
                 bytes[i] = binaryString.charCodeAt(i);
@@ -290,10 +282,6 @@ function signPDF() {
             .catch(error => {
                 throw new Error('Ошибка при загрузке PDF');
             });
-
-            } catch (serverError) {
-                throw new Error('Не удалось отправить подпись на сервер');
-            }
 
         } catch (exc) {
             statusDiv.innerHTML += `<div class="status info">${exc}</div>`;

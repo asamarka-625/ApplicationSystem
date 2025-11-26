@@ -26,7 +26,6 @@ async def generate_pdf_with_emblem_request(
         data: DucumentEmblem,
         current_user: User = Depends(get_current_user_with_role((UserRole.JUDGE, )))
 ):
-    """
     if not current_user.is_judge:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
@@ -37,7 +36,7 @@ async def generate_pdf_with_emblem_request(
 
     if not flag:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
-    """
+
     document_info = generate_pdf_with_emblem(filename=registration_number, signature_data=data)
 
     return document_info
