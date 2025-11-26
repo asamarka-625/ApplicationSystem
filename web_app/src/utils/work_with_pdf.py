@@ -84,6 +84,7 @@ def create_signature_layer(signature_data: DucumentEmblem, page_size=A4):
     signature_info = [
         f"Подписано: {signature_data.owner}",
         f"Издатель: {signature_data.publisher}",
+        f"Отпечаток: {signature_data.Thumbprint}",
         f"Срок действия от: {signature_data.valid_from.strftime('%d-%m-%Y')}",
         f"Срок действия до: {signature_data.valid_until.strftime('%d-%m-%Y')}"
     ]

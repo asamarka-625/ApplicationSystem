@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 class DucumentEmblem(BaseModel):
     owner: Annotated[str, Field(strict=True, strip_whitespace=True)]
     publisher: Annotated[str, Field(strict=True, strip_whitespace=True)]
+    Thumbprint: Annotated[str, Field(strict=True, strip_whitespace=True)]
     valid_from: datetime
     valid_until: datetime
 
