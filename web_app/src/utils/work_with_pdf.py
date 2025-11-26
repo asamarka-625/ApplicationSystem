@@ -6,8 +6,10 @@ import os
 import magic
 import aiofiles
 from jinja2 import Template
+from reportlab.pdfbase import pdfmetrics
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph
 from PyPDF2 import PdfReader, PdfWriter
@@ -19,6 +21,9 @@ from web_app.src.schemas import DocumentResponse, DucumentEmblem
 
 # Генерирует PDF с данными по предметам заявки
 def generate_pdf(data: Dict[str, Any], filename: str) -> DocumentResponse:
+
+    pdfmetrics.registerFont(TTFont('CustomFont', config.FONT_PATH))
+
     # Загружаем шаблон из файла
     template_path = "web_app/templates/pdf_template.html"
     with open(template_path, 'r', encoding='utf-8') as f:
@@ -39,7 +44,7 @@ def generate_pdf(data: Dict[str, Any], filename: str) -> DocumentResponse:
     # Стиль для всего контента
     content_style = ParagraphStyle(
         'ContentStyle',
-        fontName='Helvetica',
+        fontName='CustomFont',
         fontSize=10,
         leading=14,
         leftIndent=0,

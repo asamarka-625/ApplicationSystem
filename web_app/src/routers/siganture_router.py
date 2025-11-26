@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile
 from web_app.src.models import User, UserRole
 from web_app.src.dependencies import get_current_user_with_role
 from web_app.src.schemas import DocumentResponse, DucumentEmblem
-from web_app.src.crud import sql_check_request_by_judge, sql_approve_request
+from web_app.src.crud import sql_check_request_for_sign_by_judge, sql_approve_request
 from web_app.src.utils import generate_pdf_with_emblem, save_pdf_signed
 
 
@@ -29,7 +29,7 @@ async def generate_pdf_with_emblem_request(
     if not current_user.is_judge:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
-    flag = await sql_check_request_by_judge(
+    flag = await sql_check_request_for_sign_by_judge(
         judge_id=current_user.judge_profile.id,
         registration_number=registration_number
     )
@@ -55,7 +55,7 @@ async def load_pdf_signed_request(
     if not current_user.is_judge:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
-    flag = await sql_check_request_by_judge(
+    flag = await sql_check_request_for_sign_by_judge(
         judge_id=current_user.judge_profile.id,
         registration_number=registration_number
     )

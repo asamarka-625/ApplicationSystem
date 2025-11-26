@@ -1895,7 +1895,7 @@ async def sql_get_count_planning_requests_by_user(
 
 # Проверяем принадлежит ли заявка судье
 @connection
-async def sql_check_request_by_judge(
+async def sql_check_request_for_sign_by_judge(
     judge_id: int,
     registration_number: str,
     session: AsyncSession
@@ -1904,7 +1904,8 @@ async def sql_check_request_by_judge(
         request_result = await session.execute(
             sa.select(sa.exists().where(
                 Request.registration_number == registration_number,
-                Request.judge_id == judge_id
+                Request.judge_id == judge_id,
+                Request.status == RequestStatus.REGISTERED
             ))
         )
         return request_result.scalar()

@@ -373,12 +373,6 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeFileInput();
 });
 
-// Функция показа уведомлений
-function showNotification(message, type = 'success') {
-    // Реализуйте отображение уведомлений в соответствии с вашим проектом
-    alert(`${type === 'success' ? '✓' : type === 'error' ? '✗' : '⚠'} ${message}`);
-}
-
 function initializeFileInput() {
     const fileInput = document.getElementById('attachments');
     const fileListContainer = document.createElement('div');

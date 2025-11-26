@@ -159,37 +159,32 @@ async function selectCertificate(index) {
 // Генерация PDF
 async function generatePDF(owner, publisher, valid_from, valid_until) {
     const statusDiv = document.getElementById('signStatus');
-    try {
-        statusDiv.innerHTML = '<div class="status info">Генерация документа...</div>';
+    statusDiv.innerHTML = '<div class="status info">Генерация документа...</div>';
 
-        const response = await fetch(`${API_BASE}/generate-pdf/emblem/${registrationNumber}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-                owner: owner,
-                publisher: publisher,
-                Thumbprint: currentCertThumbprint,
-                valid_from: valid_from,
-                valid_until: valid_until
-            })
-        });
+    const response = await fetch(`${API_BASE}/generate-pdf/emblem/${registrationNumber}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            owner: owner,
+            publisher: publisher,
+            Thumbprint: currentCertThumbprint,
+            valid_from: valid_from,
+            valid_until: valid_until
+        })
+    });
 
-        if (!response.ok) {
-            throw new Error('Ошибка генерации документа');
-        }
-
-        const data = await response.json();
-        currentFileUrl = data.file_url;
-        statusDiv.innerHTML = `<div class="status success">
-            Запрос отправлен на сервер
-        </div>`;
-
-    } catch (error) {
-        statusDiv.innerHTML = `<div class="status error">Ошибка: ${error.message}</div>`;
+    if (!response.ok) {
+        throw new Error('Ошибка генерации документа');
     }
+
+    const data = await response.json();
+    currentFileUrl = data.file_url;
+    statusDiv.innerHTML = `<div class="status success">
+        Запрос отправлен на сервер
+    </div>`;
 }
 
 // Подписание PDF (обновленная версия по примеру из статьи)
@@ -227,6 +222,7 @@ async function signPDF() {
                     cadesplugin.CADESCOM_CADES_BES,
                     false
                 );
+
             } catch (err) {
                 alert("Failed to create signature. Error: " + cadesplugin.getLastError(err));
                 return;
@@ -241,7 +237,7 @@ async function signPDF() {
                     cadesplugin.CADESCOM_CADES_BES,
                     false
                 );
-                alert("Signature verified successfully for file: ");
+
             } catch (err) {
                 alert("Failed to verify signature. Error: " + cadesplugin.getLastError(err));
                 return;
@@ -284,6 +280,8 @@ async function signPDF() {
                     window.open(result.file_url, '_blank');
                 });
                 downloadBtn.disabled = false;
+                document.getElementById("loadCertsBtn").disabled = true;
+                document.getElementById("signBtn").disabled = true;
                 statusDiv.innerHTML = '<div class="status info">Документ успешно подписан</div>';
                 return result;
             })
