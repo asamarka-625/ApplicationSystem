@@ -282,6 +282,7 @@ async function signPDF() {
                 downloadBtn.disabled = false;
                 document.getElementById("loadCertsBtn").disabled = true;
                 document.getElementById("signBtn").disabled = true;
+                document.getElementById("certificatesList").style.display = 'none';
                 statusDiv.innerHTML = '<div class="status info">Документ успешно подписан</div>';
                 return result;
             })

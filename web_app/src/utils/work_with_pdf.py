@@ -19,10 +19,11 @@ from web_app.src.core import config
 from web_app.src.schemas import DocumentResponse, DucumentEmblem
 
 
+pdfmetrics.registerFont(TTFont('CustomFont', config.FONT_PATH))
+
+
 # Генерирует PDF с данными по предметам заявки
 def generate_pdf(data: Dict[str, Any], filename: str) -> DocumentResponse:
-    pdfmetrics.registerFont(TTFont('CustomFont', config.FONT_PATH))
-
     # Загружаем шаблон из файла
     template_path = "web_app/templates/pdf_template.html"
     with open(template_path, 'r', encoding='utf-8') as f:
@@ -78,11 +79,11 @@ def create_signature_layer(signature_data: DucumentEmblem, page_size=A4):
     signature_y = logo_y + logo_height + 20  # Над эмблемой
 
     # Заголовок ЭЦП
-    c.setFont("Helvetica-Bold", 10)
+    c.setFont("CustomFont", 10)
     c.drawString(signature_x, signature_y + 40, "ЭЛЕКТРОННАЯ ЦИФРОВАЯ ПОДПИСЬ")
 
     # Информация о подписи
-    c.setFont("Helvetica", 9)
+    c.setFont("CustomFont", 9)
     y_position = signature_y + 25
 
     signature_info = [
