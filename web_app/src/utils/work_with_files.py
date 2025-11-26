@@ -28,10 +28,10 @@ async def save_uploaded_files(attachments: Optional[List[UploadFile]]) -> Option
 
             content = await attachment.read()
 
-            await validate_file_safety(content, attachment.filename)
+            validate_file_safety(content, attachment.filename)
             file_extension = os.path.splitext(attachment.filename)[1]
             unique_filename = uuid.uuid4().hex
-            file_path = f"{config.USER_DOCUMENTS}{unique_filename}{file_extension}"
+            file_path = f"{config.USER_DOCUMENTS}/{unique_filename}{file_extension}"
 
             # Сохраняем файл с помощью aiofiles
             async with aiofiles.open(file_path, 'wb') as f:
@@ -40,7 +40,7 @@ async def save_uploaded_files(attachments: Optional[List[UploadFile]]) -> Option
             files_info.append(AttachmentsRequest(
                 file_name=unique_filename,
                 content_type=attachment.content_type,
-                file_path=f"{config.USER_DOCUMENTS}{unique_filename}{file_extension}",
+                file_path=f"{config.USER_DOCUMENTS}/{unique_filename}{file_extension}",
                 size=attachment.size
             ))
 
@@ -51,7 +51,10 @@ async def save_uploaded_files(attachments: Optional[List[UploadFile]]) -> Option
             delete_files(files_info)
 
             config.logger.error(f"Error saving file {attachment.filename}: {err}")
-            raise HTTPException(status_code=500, detail=f"Error saving file {attachment.filename}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error saving file {attachment.filename}"
+            )
 
     return files_info
 
@@ -67,12 +70,12 @@ def delete_files(file_paths: List[str]) -> None:
 
 
 # Проверяет файл на безопасность
-async def validate_file_safety(file_content: bytes, filename: str) -> str:
+def validate_file_safety(file_content: bytes, filename: str) -> str:
     # Проверяем расширение файла
     file_extension = os.path.splitext(filename)[1].lower()
     if file_extension not in config.ALLOWED_EXTENSIONS:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Тип файла {file_extension} не поддерживается"
         )
 

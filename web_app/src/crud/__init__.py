@@ -16,7 +16,7 @@ from web_app.src.crud.request import (sql_create_request, sql_get_requests_by_us
                                       sql_get_planning_requests, sql_planning_request, sql_finish_request,
                                       sql_delete_attachment, sql_get_requests_for_download,
                                       sql_get_planning_for_download, sql_get_count_requests_by_user,
-                                      sql_get_count_planning_requests_by_user)
+                                      sql_get_count_planning_requests_by_user, sql_check_request_by_judge)
 from web_app.src.crud.judge import sql_get_department_id_by_judge_id
 from web_app.src.crud.executor import sql_get_executors
 from web_app.src.crud.management_department import sql_get_management_departments

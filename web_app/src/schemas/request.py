@@ -157,6 +157,7 @@ class RequestDetailResponse(BaseModel):
     updated_at: Optional[datetime]
     completed_at: Optional[datetime]
     is_emergency: bool
+    pdf_request: Annotated[str, Field(strict=True, strip_whitespace=True)]
     attachments: Optional[List[AttachmentsRequest]] = None
     history: List[RequestHistoryResponse]
     rights: RightsResponse

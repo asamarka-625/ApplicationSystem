@@ -146,6 +146,27 @@ async def planning_page(
     return templates.TemplateResponse('planning.html', context=context)
 
 
+# Страница подписи pdf файла
+@router.get("/signature/{registration_number}", response_class=HTMLResponse)
+async def signature_page(
+        request: Request,
+        current_user: User = Depends(get_current_user)
+):
+    if not current_user.is_judge:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
+
+    context = {
+        "request": request,
+        "page": "signature",
+        "title": "Подписание PDF документа",
+        "full_name": current_user.full_name,
+        "role": current_user.role.name,
+        "role_value": current_user.role.value.capitalize()
+    }
+
+    return templates.TemplateResponse('signature.html', context=context)
+
+
 # Страница аутентификации
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):

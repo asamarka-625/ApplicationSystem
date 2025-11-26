@@ -8,6 +8,7 @@ from web_app.src.routers.api_router import router as api_router
 from web_app.src.routers.update_router import router as update_router
 from web_app.src.routers.authentication_router import router as authentication_router
 from web_app.src.routers.download_router import router as download_router
+from web_app.src.routers.siganture_router import router as signature_router
 
 
 router = APIRouter()
@@ -18,3 +19,4 @@ router.include_router(api_router)
 router.include_router(update_router)
 router.include_router(authentication_router)
 router.include_router(download_router)
+router.include_router(signature_router)

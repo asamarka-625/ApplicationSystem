@@ -23,7 +23,7 @@ from web_app.src.schemas import (CreateRequest, RequestResponse, RequestDetailRe
                                  ItemsNameRequestFull, RedirectRequestWithDeadline, RequestExecutorResponse,
                                  PlanningRequest, ActualStatusRequest, ACTUAL_STATUS_MAPPING_FOR_REQUEST_STATUS,
                                  ACTUAL_STATUS_MAPPING_FOR_REQUEST_ITEM_STATUS)
-from web_app.src.utils import delete_files
+from web_app.src.utils import delete_files, generate_pdf
 from web_app.src.crud.departament import sql_get_all_department
 
 
@@ -117,10 +117,39 @@ async def sql_create_request(
         except NoResultFound:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Department not found")
 
+        registration_number = str(uuid.uuid4())
+        processed_items = {}
+
+        if data.items:
+            for item in data.items:
+                if processed_items.get(item.id) is None:
+                    processed_items[item.id] = {
+                        "item_id": item.id,
+                        "count": item.quantity
+                    }
+                else:
+                    processed_items[item.id]["count"] += item.quantity
+
+        item_names_result = await session.execute(
+            sa.select(Item.id, Item.name)
+            .where(Item.id.in_(tuple(processed_items.keys())))
+        )
+        item_names = item_names_result.all()
+
+        data_for_pdf = {
+            'number': registration_number,
+            'status': RequestStatus.REGISTERED.value,
+            'notes': ('Срочная заявка' if data.is_emergency else 'Обычная заявка'),
+            'items_list': [{"name": item[1], "quantity": processed_items[item[0]]["count"]} for item in item_names]
+        }
+
+        document_info = generate_pdf(data=data_for_pdf, filename=registration_number)
+
         new_request = Request(
-            registration_number=str(uuid.uuid4()),
+            registration_number=registration_number,
             description=data.description,
             request_type=request_type,
+            pdf_request_url=document_info.file_url,
             is_emergency=data.is_emergency,
             secretary_id=secretary_id,
             judge_id=judge_id,
@@ -131,17 +160,9 @@ async def sql_create_request(
 
         new_request.human_registration_number = f"{new_request.id}-{department_code}-{datetime.now().year}"
 
-        if data.items:
-            processed_items = {}
-            for item in data.items:
-                if processed_items.get(item.id) is None:
-                    processed_items[item.id] = {
-                        "request_id": new_request.id,
-                        "item_id": item.id,
-                        "count": item.quantity
-                    }
-                else:
-                    processed_items[item.id]["count"] += item.quantity
+        if processed_items:
+            for key in processed_items:
+                processed_items[key]["request_id"] = new_request.id
 
             # Связываем предметы с заявкой
             await session.execute(request_item.insert().values(tuple(processed_items.values())))
@@ -659,6 +680,7 @@ async def sql_get_request_details(
             updated_at=request.update_at,
             completed_at=request.completed_at,
             is_emergency=request.is_emergency,
+            pdf_request=request.pdf_signed_request_url if request.pdf_signed_request_url else request.pdf_request_url,
             attachments=[
                 AttachmentsRequest(
                     file_name=attachment.file_name,
@@ -820,6 +842,32 @@ async def sql_edit_request(
 
         items_ids = tuple(item.id for item in data.items)
 
+        processed_items = {}
+        if data.items:
+            for item in data.items:
+                if processed_items.get(item.id) is None:
+                    processed_items[item.id] = {
+                        "item_id": item.id,
+                        "count": item.quantity
+                    }
+                else:
+                    processed_items[item.id]["count"] += item.quantity
+
+        item_names_result = await session.execute(
+            sa.select(Item.id, Item.name)
+            .where(Item.id.in_(items_ids))
+        )
+        item_names = item_names_result.all()
+
+        data_for_pdf = {
+            'number': registration_number,
+            'status': request.status.value,
+            'notes': ('Срочная заявка' if request.is_emergency else 'Обычная заявка'),
+            'items_list': [{"name": item[1], "quantity": processed_items[item[0]]["count"]} for item in item_names]
+        }
+
+        generate_pdf(data=data_for_pdf, filename=registration_number)
+
         # Удаляем записи и возвращаем удаленные данные
         delete_result = await session.execute(
             sa.delete(request_item).where(
@@ -975,6 +1023,8 @@ async def sql_edit_request(
         raise
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         config.logger.error(f"Unexpected error edit data request: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
 
@@ -982,10 +1032,11 @@ async def sql_edit_request(
 # Подтвреждение заявки
 @connection
 async def sql_approve_request(
-        registration_number: str,
-        user_id: int,
-        judge_id: int,
-        session: AsyncSession
+    registration_number: str,
+    user_id: int,
+    judge_id: int,
+    signed_pdf_url: str,
+    session: AsyncSession
 ) -> None:
     try:
         request_result = await session.execute(
@@ -1000,6 +1051,7 @@ async def sql_approve_request(
         request = request_result.scalar_one()
 
         request.status = RequestStatus.CONFIRMED
+        request.pdf_signed_request_url = signed_pdf_url
 
         new_history = RequestHistory(
             action=RequestAction.CONFIRMED,
@@ -1838,4 +1890,32 @@ async def sql_get_count_planning_requests_by_user(
 
     except Exception as e:
         config.logger.error(f"Unexpected error view count planning: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
+
+
+# Проверяем принадлежит ли заявка судье
+@connection
+async def sql_check_request_by_judge(
+    judge_id: int,
+    registration_number: str,
+    session: AsyncSession
+) -> bool:
+    try:
+        request_result = await session.execute(
+            sa.select(sa.exists().where(
+                Request.registration_number == registration_number,
+                Request.judge_id == judge_id
+            ))
+        )
+        return request_result.scalar()
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error check request by judge: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error check request by judge: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="/static/css/create.css">
     {% elif page == "detail" %}
     <link rel="stylesheet" href="/static/css/detail.css">
+    {% elif page == "signature" %}
+    <link rel="stylesheet" href="/static/css/signature.css">
     {% endif %}
 </head>
 <body>
@@ -131,6 +133,9 @@
     <script src="/static/js/requests_executors.js"></script>
     {% elif page == "planning" %}
     <script src="/static/js/planning.js"></script>
+    {% elif page == "signature" %}
+    <script language="javascript" src="https://www.cryptopro.ru/sites/default/files/products/cades/cadesplugin_api.js"></script>
+    <script src="/static/js/signature.js"></script>
     {% endif %}
 </body>
 </html>

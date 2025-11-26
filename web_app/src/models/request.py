@@ -68,14 +68,13 @@ class Request(Base):
 
     id: so.Mapped[int] = so.mapped_column(sa.Integer, primary_key=True)
     registration_number: so.Mapped[str] = so.mapped_column(
-        sa.String,
+        sa.String(128),
         unique=True,
         index=True,
         nullable=False
     )
-    human_registration_number: so.Mapped[str] = so.mapped_column(
-        sa.String,
-        unique=True,
+    human_registration_number: so.Mapped[Optional[str]] = so.mapped_column(
+        sa.String(64),
         nullable=True
     )
     description: so.Mapped[Optional[str]] = so.mapped_column(sa.Text, nullable=True)
@@ -95,6 +94,16 @@ class Request(Base):
         sa.Boolean,
         default=False,
         nullable=False
+    )
+
+    # PDF файлы
+    pdf_request_url: so.Mapped[str] = so.mapped_column(
+        sa.String(128),
+        nullable=False
+    )
+    pdf_signed_request_url: so.Mapped[Optional[str]] = so.mapped_column(
+        sa.String(128),
+        nullable=True
     )
 
     # Сроки

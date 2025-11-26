@@ -1,0 +1,17 @@
+<b><font size="14">ЗАЯВКА НА ПРЕДМЕТЫ</font></b>
+
+<br/><br/>
+
+<b>Информация о заявке:</b><br/>
+Дата формирования: {{ current_date }}<br/>
+Номер заявки: {{ data.number }}<br/>
+Статус: {{ data.status }}<br/>
+
+<br/>
+
+<b>Предметы:</b><br/>
+{% for item in data.items_list %}
+{{ loop.index }}. {{ item.name }} - Количество: {{ item.quantity }}<br/>
+{% endfor %}
+
+<br/>

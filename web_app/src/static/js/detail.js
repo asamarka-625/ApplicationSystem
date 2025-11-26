@@ -361,6 +361,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Заполняем данные
         document.getElementById('registrationNumber').textContent = request.registration_number;
         document.getElementById('humanRegistrationNumber').textContent = request.human_registration_number;
+        document.getElementById('pdf_request').href = request.pdf_request;
         document.getElementById('regNumber').textContent = request.registration_number;
         document.getElementById('requestType').textContent = request.request_type.value;
         displayItems(request.items, request.rights, rights);

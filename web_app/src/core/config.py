@@ -32,7 +32,9 @@ class Config:
     APP_NAME: str = field(default_factory=lambda: os.getenv("APP_NAME"))
 
     MAINTENANCE_ITEM_ID: int = field(default_factory=lambda: os.getenv("MAINTENANCE_ITEM_ID"))
-    USER_DOCUMENTS: str = "web_app/src/static/user_documents/"
+    USER_DOCUMENTS: str = "web_app/src/static/user_documents"
+    PDF_REQUESTS: str = "web_app/src/static/pdf_requests"
+
     ALLOWED_MIME_TYPES: Dict[str, List[str]] = field(default_factory=lambda: {
         'image': [
             'image/jpeg',

@@ -13,6 +13,7 @@ services:
     volumes:
       - ./logs:/app/logs
       - ./web_app/src/static/user_documents:/app/web_app/src/static/user_documents
+      - ./web_app/src/static/pdf_requests:/app/web_app/src/static/pdf_requests
     env_file:
       - .env
     logging:

@@ -5,5 +5,6 @@ from web_app.src.utils.redis_token_service import get_token_service
 from web_app.src.utils.work_with_files import save_uploaded_files, delete_files
 from web_app.src.utils.work_with_rights import get_allowed_rights
 from web_app.src.utils.email_service import send_password_reset_email
+from web_app.src.utils.work_with_pdf import generate_pdf, generate_pdf_with_emblem, save_pdf_signed
 
 token_service = get_token_service()
