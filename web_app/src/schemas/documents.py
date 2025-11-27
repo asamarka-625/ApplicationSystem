@@ -29,6 +29,6 @@ class DocumentData(BaseModel):
     department_number: Annotated[int, Field(ge=1)]
     address: Annotated[str, Field(strict=True, strip_whitespace=True)]
     items: List[DocumentItem]
-    fio_secretary: Annotated[str, Field(strict=True, strip_whitespace=True)]
-    fio_judge: Annotated[str, Field(strict=True, strip_whitespace=True)]
+    secretary: Annotated[str, Field(strict=True, strip_whitespace=True)]
+    judge: Annotated[str, Field(strict=True, strip_whitespace=True)]
     signature: Optional[DocumentEmblem] = None

@@ -95,7 +95,7 @@
     <b>СЕКРЕТАРЬ СУДА<br/>
     СУДЕБНОГО УЧАСТКА №{{ department_number }}<br/>
     САНКТ-ПЕТЕРБУРГА<br/>
-    {{ fio_secretary }}</b><br/>
+    {{ secretary }}</b><br/>
     {{ address }}
 </div>
 
@@ -121,8 +121,8 @@
 </div>
 
 <ul>
-    {% for item, quantity in items %}
-        <li>{{ item }} - {{ quantity }} шт.</li>
+    {% for item in items %}
+        <li>{{ item.name }} - {{ quantity.count }} шт.</li>
     {% endfor %}
 </ul>
 
@@ -130,7 +130,7 @@
     <table width="100%">
         <tr>
             <td>Мировой судья с/у №{{ department_number }} СПб</td>
-            <td align="right">{{ fio_judge }}</td>
+            <td align="right">{{ judge }}</td>
         </tr>
     </table>
 </div>

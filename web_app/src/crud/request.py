@@ -131,6 +131,8 @@ async def sql_create_request(
         if judge_user is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Judge not found")
 
+        fio_judge = judge_user.full_name.split(" ")
+
         registration_number = str(uuid.uuid4())
         processed_items = {}
 
@@ -161,8 +163,8 @@ async def sql_create_request(
                 )
                 for item in item_names
             ],
-            fio_secretary=fio_secretary,
-            fio_judge=judge_user.full_name
+            secretary=fio_secretary,
+            judge=f"{'. '.join(tuple(part[0] for part in fio_judge[1:]))} {fio_judge[1]}"
         )
 
         document_info = generate_pdf(data=data_for_pdf, filename=registration_number)
@@ -887,6 +889,7 @@ async def sql_edit_request(
             .where(Item.id.in_(items_ids))
         )
         item_names = item_names_result.all()
+        fio_judge = request.judge.user.full_name.split(" ")
 
         data_for_pdf = DocumentData(
             date=datetime.now().strftime("%d.%m.%Y"),
@@ -899,8 +902,8 @@ async def sql_edit_request(
                 )
                 for item in item_names
             ],
-            fio_secretary=request.secretary.user.full_name,
-            fio_judge=request.judge.user.full_name
+            secretary=request.secretary.user.full_name,
+            judge=f"{'. '.join(tuple(part[0] for part in fio_judge[1:]))} {fio_judge[1]}"
         )
 
         generate_pdf(data=data_for_pdf, filename=registration_number)
@@ -1983,6 +1986,7 @@ async def sql_get_data_request_for_sign_by_judge(
         )
 
         request = request_result.scalar_one()
+        fio_judge = request.judge.user.full_name.split(" ")
 
         return DocumentData(
             date=datetime.now().strftime("%d.%m.%Y"),
@@ -1995,8 +1999,8 @@ async def sql_get_data_request_for_sign_by_judge(
                 )
                 for association in request.item_associations
             ],
-            fio_secretary=request.secretary.user.full_name,
-            fio_judge=request.judge.user.full_name
+            secretary=request.secretary.user.full_name,
+            judge=f"{'. '.join(tuple(part[0] for part in fio_judge[1:]))} {fio_judge[1]}"
         )
 
     except NoResultFound:
