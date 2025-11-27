@@ -277,7 +277,12 @@ async function signPDF() {
             .then(result => {
                 const downloadBtn = document.getElementById("downloadBtn");
                 downloadBtn.addEventListener("click", function() {
-                    window.open(result.file_url, '_blank');
+                    const link = document.createElement('a');
+                    link.href = result.file_url;
+                    link.download = `${registrationNumber}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
                 });
                 downloadBtn.disabled = false;
                 document.getElementById("loadCertsBtn").disabled = true;
