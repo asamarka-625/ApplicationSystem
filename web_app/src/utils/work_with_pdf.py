@@ -17,17 +17,21 @@ def generate_pdf(data: DocumentData, filename: str) -> DocumentResponse:
     with open(template_path, 'r', encoding='utf-8') as f:
         template_content = f.read()
 
-    # Рендерим шаблон с помощью Jinja2
-    template = Template(template_content)
-    rendered_html = template.render(**data.model_dump())
+    data_dict = data.model_dump()
 
-    # Создаем PDF из HTML
     if data.signature is None:
         file_path = f"{config.PDF_REQUESTS}/not_signed/{filename}.pdf"
 
     else:
         file_path = f"{config.PDF_REQUESTS}/temp/{filename}.pdf"
+        data_dict["valid_from"] = data_dict["valid_from"].strftime("%d.%m.%Y")
+        data_dict["valid_until"] = data_dict["valid_until"].strftime("%d.%m.%Y")
 
+    # Рендерим шаблон с помощью Jinja2
+    template = Template(template_content)
+    rendered_html = template.render(**data_dict)
+
+    # Создаем PDF из HTML
     HTML(string=rendered_html, encoding='utf-8').write_pdf(file_path)
 
     return DocumentResponse(

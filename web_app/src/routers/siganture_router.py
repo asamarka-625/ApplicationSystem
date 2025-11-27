@@ -35,7 +35,7 @@ async def generate_pdf_with_emblem_request(
         registration_number=registration_number
     )
     data.owner = next(
-        (el.replace("CN=", "") for el in data.owner.split(" ") if "CN=" in el),
+        (el[:-1].replace("CN=", "") for el in data.owner.split(" ") if "CN=" in el),
         ""
     )
     data_for_pdf.signature = data
