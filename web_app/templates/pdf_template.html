@@ -140,9 +140,9 @@
         ДОКУМЕНТ ПОДПИСАН<br>
         ЭЛЕКТРОННОЙ ПОДПИСЬЮ<br>
         <div class="stamp-content">
-            Сертификат: {{ certificate }}<br>
-            Владелец: {{ owner }}<br>
-            Действителен с {{ date_from }} до {{ date_until }}
+            Сертификат: {{ signature.certificate }}<br>
+            Владелец: {{ signature.owner }}<br>
+            Действителен с {{ signature.date_from }} до {{ signature.date_until }}
         </div>
     </div>
 </div>
