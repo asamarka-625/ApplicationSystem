@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 # Схема данных для эмблемы pdf
 class DocumentEmblem(BaseModel):
     owner: Annotated[str, Field(strict=True, strip_whitespace=True)]
-    Thumbprint: Annotated[str, Field(strict=True, strip_whitespace=True)]
+    thumbprint: Annotated[str, Field(strict=True, strip_whitespace=True)]
     valid_from: datetime
     valid_until: datetime
 

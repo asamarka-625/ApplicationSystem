@@ -34,6 +34,10 @@ async def generate_pdf_with_emblem_request(
         judge_id=current_user.judge_profile.id,
         registration_number=registration_number
     )
+    data.owner = next(
+        (el.replace("CN=", "") for el in data.owner.split(" ") if "CN=" in el),
+        ""
+    )
     data_for_pdf.signature = data
 
     document_info = generate_pdf(data=data_for_pdf, filename=registration_number,)

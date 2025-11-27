@@ -157,7 +157,7 @@ async function selectCertificate(index) {
 }
 
 // Генерация PDF
-async function generatePDF(owner, publisher, valid_from, valid_until) {
+async function generatePDF(owner, valid_from, valid_until) {
     const statusDiv = document.getElementById('signStatus');
     statusDiv.innerHTML = '<div class="status info">Генерация документа...</div>';
 
@@ -169,8 +169,7 @@ async function generatePDF(owner, publisher, valid_from, valid_until) {
         },
         body: JSON.stringify({
             owner: owner,
-            publisher: publisher,
-            Thumbprint: currentCertThumbprint,
+            thumbprint: currentCertThumbprint,
             valid_from: valid_from,
             valid_until: valid_until
         })
@@ -199,7 +198,7 @@ async function signPDF() {
 
     const certInfo = certificates[selectedCertificateIndex];
 
-    await generatePDF(certInfo.subjectName, certInfo.issuerName, certInfo.validFrom, certInfo.validTo);
+    await generatePDF(certInfo.subjectName, certInfo.validFrom, certInfo.validTo);
 
     cadesplugin.async_spawn(function*() {
         try {
