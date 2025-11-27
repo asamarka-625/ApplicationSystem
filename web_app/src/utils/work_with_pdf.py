@@ -11,7 +11,7 @@ from web_app.src.schemas import DocumentResponse, DocumentData
 
 
 # Генерирует PDF с данными по предметам заявки
-def generate_pdf(data: DocumentData, filename: str):
+def generate_pdf(data: DocumentData, filename: str) -> DocumentResponse:
     # Загружаем шаблон из файла
     template_path = "web_app/templates/pdf_template.html"
     with open(template_path, 'r', encoding='utf-8') as f:
@@ -29,6 +29,10 @@ def generate_pdf(data: DocumentData, filename: str):
         file_path = f"{config.PDF_REQUESTS}/temp/{filename}.pdf"
 
     HTML(string=rendered_html, encoding='utf-8').write_pdf(file_path)
+
+    return DocumentResponse(
+        file_url=file_path.replace("web_app/src", "")
+    )
 
 
 # Проверяет файл на pdf формат
