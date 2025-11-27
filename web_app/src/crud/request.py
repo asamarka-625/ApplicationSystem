@@ -1978,7 +1978,7 @@ async def sql_get_data_request_for_sign_by_judge(
                 Request.status == RequestStatus.REGISTERED
             )
             .options(
-                so.selectinload(Request.item_associations),
+                so.selectinload(Request.item_associations).joinedload(RequestItem.item),
                 so.joinedload(Request.secretary).joinedload(Secretary.user),
                 so.joinedload(Request.judge).joinedload(Judge.user),
                 so.joinedload(Request.department)
