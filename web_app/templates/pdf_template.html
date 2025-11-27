@@ -1,17 +1,151 @@
-<b><font size="14">ЗАЯВКА НА ПРЕДМЕТЫ</font></b>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Заявка</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        body {
+            font-family: "Times New Roman", serif;
+            font-size: 14pt;
+            line-height: 1.4;
+            margin: 0;
+            padding: 0;
+        }
+        .header-left {
+            float: left;
+            width: 50%;
+            margin-bottom: 30px;
+        }
+        .header-right {
+            float: right;
+            width: 45%;
+            text-align: right;
+            margin-bottom: 30px;
+        }
+        .clear {
+            clear: both;
+        }
+        .center {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .date {
+            text-align: center;
+            margin: 40px 0 30px 0;
+            font-size: 14pt;
+        }
+        .title {
+            text-align: center;
+            margin: 30px 0 40px 0;
+            font-weight: bold;
+            font-size: 16pt;
+        }
+        .content {
+            margin: 20px 0;
+            line-height: 1.6;
+        }
+        ul {
+            margin: 20px 0;
+            padding-left: 40px;
+        }
+        li {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+        .signature-space {
+            margin-top: 60px;
+        }
+        .footer {
+            margin-top: 80px;
+        }
+        .footer table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .footer td {
+            padding: 5px 0;
+        }
+        .electronic-signature {
+            text-align: center;
+            margin-top: 60px;
+        }
+        .stamp {
+            display: inline-block;
+            border: 2px solid #000;
+            border-radius: 20px;
+            padding: 15px 25px;
+            background: white;
+            font-size: 10pt;
+            font-weight: bold;
+        }
+        .stamp-content {
+            font-weight: normal;
+            line-height: 1.4;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
 
-<br/><br/>
+<div class="header-left">
+    <b>СЕКРЕТАРЬ СУДА<br/>
+    СУДЕБНОГО УЧАСТКА №{{ department_number }}<br/>
+    САНКТ-ПЕТЕРБУРГА<br/>
+    {{ fio_secretary }}</b><br/>
+    {{ address }}
+</div>
 
-<b>Информация о заявке:</b><br/>
-Дата формирования: {{ current_date }}<br/>
-Номер заявки: {{ data.number }}<br/>
-Статус: {{ data.status }}<br/>
+<div class="header-right">
+    Начальнику управления<br/>
+    по обеспечению деятельности мировых<br/>
+    судей Санкт-Петербурга<br/>
+    А.А. Рыбалкину
+</div>
 
-<br/>
+<div class="clear"></div>
 
-<b>Предметы:</b><br/>
-{% for item in data.items_list %}
-{{ loop.index }}. {{ item.name }} - Количество: {{ item.quantity }}<br/>
-{% endfor %}
+<div class="date">
+    {{ date }}
+</div>
 
-<br/>
+<div class="title">
+    ЗАЯВКА
+</div>
+
+<div class="content">
+    <p>В связи с производственной необходимостью, прошу обеспечить судебный участок:</p>
+</div>
+
+<ul>
+    {% for item, quantity in items %}
+        <li>{{ item }} - {{ quantity }} шт.</li>
+    {% endfor %}
+</ul>
+
+<div class="footer">
+    <table width="100%">
+        <tr>
+            <td>Мировой судья с/у №{{ department_number }} СПб</td>
+            <td align="right">{{ fio_judge }}</td>
+        </tr>
+    </table>
+</div>
+{% if siganture %}
+<div class="electronic-signature">
+    <div class="stamp">
+        ДОКУМЕНТ ПОДПИСАН<br>
+        ЭЛЕКТРОННОЙ ПОДПИСЬЮ<br>
+        <div class="stamp-content">
+            Сертификат: {{ certificate }}<br>
+            Владелец: {{ owner }}<br>
+            Действителен с {{ date_from }} до {{ date_until }}
+        </div>
+    </div>
+</div>
+{% endif %}
+</body>
+</html>

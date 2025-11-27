@@ -5,10 +5,10 @@ from fastapi import APIRouter, Request, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 # Внутренние модули
-from web_app.src.dependencies import get_current_user
-from web_app.src.models import User
+from web_app.src.dependencies import get_current_user, get_current_user_with_role
+from web_app.src.models import User, UserRole
 from web_app.src.utils import token_service, generate_password
-from web_app.src.crud import sql_update_password_user_by_id
+from web_app.src.crud import sql_update_password_user_by_id, sql_check_request_for_sign_by_judge
 
 
 router = APIRouter()
@@ -149,10 +149,19 @@ async def planning_page(
 # Страница подписи pdf файла
 @router.get("/signature/{registration_number}", response_class=HTMLResponse)
 async def signature_page(
-        request: Request,
-        current_user: User = Depends(get_current_user)
+    request: Request,
+    registration_number: Annotated[str, Field(strict=True)],
+    current_user: User = Depends(get_current_user_with_role((UserRole.JUDGE, )))
 ):
     if not current_user.is_judge:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
+
+    flag = await sql_check_request_for_sign_by_judge(
+        judge_id=current_user.judge_profile.id,
+        registration_number=registration_number
+    )
+
+    if not flag:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
     context = {

@@ -22,7 +22,7 @@ from web_app.src.schemas import (CreateRequest, RequestResponse, RequestDetailRe
                                  RedirectRequest, UserResponse, AttachmentsRequest, ItemsNameRequest,
                                  ItemsNameRequestFull, RedirectRequestWithDeadline, RequestExecutorResponse,
                                  PlanningRequest, ActualStatusRequest, ACTUAL_STATUS_MAPPING_FOR_REQUEST_STATUS,
-                                 ACTUAL_STATUS_MAPPING_FOR_REQUEST_ITEM_STATUS)
+                                 ACTUAL_STATUS_MAPPING_FOR_REQUEST_ITEM_STATUS, DocumentData, DocumentItem)
 from web_app.src.utils import delete_files, generate_pdf
 from web_app.src.crud.departament import sql_get_all_department
 
@@ -85,7 +85,8 @@ async def sql_create_request(
         user_id: int,
         secretary_id: int,
         judge_id: int,
-        department_id: int,
+        department: Department,
+        fio_secretary: str,
         session: AsyncSession
 ) -> str:
     try:
@@ -108,14 +109,13 @@ async def sql_create_request(
         else:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid request type")
 
-        try:
-            department_code_result = await session.execute(
-                sa.select(Department.code)
-                .where(Department.id == department_id)
-            )
-            department_code = department_code_result.scalar_one()
-        except NoResultFound:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Department not found")
+        judge_user_result = await session.execute(
+            sa.Select(Judge.user)
+            .where(Judge.id == judge_id)
+        )
+        judge_user = judge_user_result.scalar_one_or_none()
+        if judge_user is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Judge not found")
 
         registration_number = str(uuid.uuid4())
         processed_items = {}
@@ -136,12 +136,20 @@ async def sql_create_request(
         )
         item_names = item_names_result.all()
 
-        data_for_pdf = {
-            'number': registration_number,
-            'status': RequestStatus.REGISTERED.value,
-            'notes': ('Срочная заявка' if data.is_emergency else 'Обычная заявка'),
-            'items_list': [{"name": item[1], "quantity": processed_items[item[0]]["count"]} for item in item_names]
-        }
+        data_for_pdf = DocumentData(
+            date=datetime.now().strftime("%d.%m.%Y"),
+            department_number=department.code,
+            address=department.address,
+            items=[
+                DocumentItem(
+                    name=item[1],
+                    count=processed_items[item[0]]["count"]
+                )
+                for item in item_names
+            ],
+            fio_secretary=fio_secretary,
+            fio_judge=judge_user.full_name
+        )
 
         document_info = generate_pdf(data=data_for_pdf, filename=registration_number)
 
@@ -153,12 +161,12 @@ async def sql_create_request(
             is_emergency=data.is_emergency,
             secretary_id=secretary_id,
             judge_id=judge_id,
-            department_id=department_id
+            department_id=department.id
         )
         session.add(new_request)
         await session.flush()
 
-        new_request.human_registration_number = f"{new_request.id}-{department_code}-{datetime.now().year}"
+        new_request.human_registration_number = f"{new_request.id}-{department.code}-{datetime.now().year}"
 
         if processed_items:
             for key in processed_items:
@@ -808,7 +816,14 @@ async def sql_edit_request(
         else:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
-        request_result = await session.execute(query)
+        request_result = await session.execute(
+            query
+            .options(
+                so.joinedload(Request.secretary),
+                so.joinedload(Request.judge),
+                so.joinedload(Request.department)
+            )
+        )
 
         request = request_result.scalar_one()
 
@@ -859,12 +874,20 @@ async def sql_edit_request(
         )
         item_names = item_names_result.all()
 
-        data_for_pdf = {
-            'number': registration_number,
-            'status': request.status.value,
-            'notes': ('Срочная заявка' if request.is_emergency else 'Обычная заявка'),
-            'items_list': [{"name": item[1], "quantity": processed_items[item[0]]["count"]} for item in item_names]
-        }
+        data_for_pdf = DocumentData(
+            date=datetime.now().strftime("%d.%m.%Y"),
+            department_number=request.department.code,
+            address=request.department.address,
+            items=[
+                DocumentItem(
+                    name=item[1],
+                    count=processed_items[item[0]]["count"]
+                )
+                for item in item_names
+            ],
+            fio_secretary=request.secretary.user.full_name,
+            fio_judge=request.judge.user.full_name
+        )
 
         generate_pdf(data=data_for_pdf, filename=registration_number)
 
@@ -1919,4 +1942,60 @@ async def sql_check_request_for_sign_by_judge(
 
     except Exception as e:
         config.logger.error(f"Unexpected error check request by judge: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
+
+
+# Получаем данные о заявке для формирования pdf файла
+@connection
+async def sql_get_data_request_for_sign_by_judge(
+    judge_id: int,
+    registration_number: str,
+    session: AsyncSession
+) -> DocumentData:
+    try:
+        request_result = await session.execute(
+            sa.select(Request)
+            .where(
+                Request.registration_number == registration_number,
+                Request.judge_id == judge_id,
+                Request.status == RequestStatus.REGISTERED
+            )
+            .options(
+                so.selectinload(Request.item_associations),
+                so.joinedload(Request.secretary),
+                so.joinedload(Request.judge),
+                so.joinedload(Request.department)
+            )
+        )
+
+        request = request_result.scalar_one()
+
+        return DocumentData(
+            date=datetime.now().strftime("%d.%m.%Y"),
+            department_number=request.department.code,
+            address=request.department.address,
+            items=[
+                DocumentItem(
+                    name=association.item.name,
+                    count=association.count
+                )
+                for association in request.item_associations
+            ],
+            fio_secretary=request.secretary.user.full_name,
+            fio_judge=request.judge.user.full_name
+        )
+
+    except NoResultFound:
+        config.logger.info(f"Request not found for sign by judge: {registration_number}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found")
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error for sign by judge: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error for sign by judge: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected server error")
