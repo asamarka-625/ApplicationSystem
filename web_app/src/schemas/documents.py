@@ -2,12 +2,10 @@
 from typing import Annotated, List, Optional
 from datetime import datetime
 from pydantic import BaseModel, Field
-# Внутренние модули
-
 
 
 # Схема данных для эмблемы pdf
-class DucumentEmblem(BaseModel):
+class DocumentEmblem(BaseModel):
     owner: Annotated[str, Field(strict=True, strip_whitespace=True)]
     Thumbprint: Annotated[str, Field(strict=True, strip_whitespace=True)]
     valid_from: datetime
@@ -33,4 +31,4 @@ class DocumentData(BaseModel):
     items: List[DocumentItem]
     fio_secretary: Annotated[str, Field(strict=True, strip_whitespace=True)]
     fio_judge: Annotated[str, Field(strict=True, strip_whitespace=True)]
-    siganture: Optional[DucumentEmblem] = None
+    signature: Optional[DocumentEmblem] = None

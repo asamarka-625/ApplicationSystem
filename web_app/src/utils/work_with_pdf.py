@@ -1,5 +1,4 @@
 # Внешние зависимости
-from typing import Dict, Any
 import os
 import magic
 import aiofiles
@@ -23,7 +22,7 @@ def generate_pdf(data: DocumentData, filename: str):
     rendered_html = template.render(**data.model_dump())
 
     # Создаем PDF из HTML
-    if not data.get("signature", False):
+    if data.signature is None:
         file_path = f"{config.PDF_REQUESTS}/not_signed/{filename}.pdf"
 
     else:

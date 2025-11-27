@@ -125,7 +125,6 @@ async def create_request(
     if not current_user.is_secretary:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
-
     items_list = []
     if items and items != "null":
         try:
@@ -158,7 +157,7 @@ async def create_request(
             user_id=current_user.id,
             secretary_id=current_user.secretary_profile.id,
             judge_id=current_user.secretary_profile.judge_id,
-            department=current_user.secretary_profile.department,
+            department_id=current_user.secretary_profile.department_id,
             fio_secretary=current_user.full_name
         )
 

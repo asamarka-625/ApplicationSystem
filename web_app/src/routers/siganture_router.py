@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile
 # Внутренние модули
 from web_app.src.models import User, UserRole
 from web_app.src.dependencies import get_current_user_with_role
-from web_app.src.schemas import DocumentResponse, DucumentEmblem
+from web_app.src.schemas import DocumentResponse, DocumentEmblem
 from web_app.src.crud import (sql_check_request_for_sign_by_judge, sql_approve_request,
                               sql_get_data_request_for_sign_by_judge)
 from web_app.src.utils import generate_pdf, save_pdf_signed
@@ -24,7 +24,7 @@ router = APIRouter(
 )
 async def generate_pdf_with_emblem_request(
         registration_number: Annotated[str, Field(strict=True)],
-        data: DucumentEmblem,
+        data: DocumentEmblem,
         current_user: User = Depends(get_current_user_with_role((UserRole.JUDGE, )))
 ):
     if not current_user.is_judge:

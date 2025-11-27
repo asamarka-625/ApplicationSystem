@@ -85,7 +85,7 @@ async def sql_create_request(
         user_id: int,
         secretary_id: int,
         judge_id: int,
-        department: Department,
+        department_id: int,
         fio_secretary: str,
         session: AsyncSession
 ) -> str:
@@ -109,13 +109,27 @@ async def sql_create_request(
         else:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid request type")
 
+        department_code_address_result = await session.execute(
+            sa.Select(Department.code, Department.address)
+            .where(Department.id == department_id)
+        )
+        department_code_address = department_code_address_result.all()
+
+        if not department_code_address:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Department not found")
+
+        department_code, department_address = department_code_address[0]
+
         judge_user_result = await session.execute(
-            sa.Select(Judge.user)
+            sa.select(User)
+            .select_from(Judge)
+            .join(User, Judge.user_id == User.id)
             .where(Judge.id == judge_id)
         )
         judge_user = judge_user_result.scalar_one_or_none()
+
         if judge_user is None:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Judge not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Judge not found")
 
         registration_number = str(uuid.uuid4())
         processed_items = {}
@@ -138,8 +152,8 @@ async def sql_create_request(
 
         data_for_pdf = DocumentData(
             date=datetime.now().strftime("%d.%m.%Y"),
-            department_number=department.code,
-            address=department.address,
+            department_number=department_code,
+            address=department_address,
             items=[
                 DocumentItem(
                     name=item[1],
@@ -161,12 +175,12 @@ async def sql_create_request(
             is_emergency=data.is_emergency,
             secretary_id=secretary_id,
             judge_id=judge_id,
-            department_id=department.id
+            department_id=department_id
         )
         session.add(new_request)
         await session.flush()
 
-        new_request.human_registration_number = f"{new_request.id}-{department.code}-{datetime.now().year}"
+        new_request.human_registration_number = f"{new_request.id}-{department_code}-{datetime.now().year}"
 
         if processed_items:
             for key in processed_items:
