@@ -164,7 +164,7 @@ async def sql_create_request(
                 for item in item_names
             ],
             secretary=fio_secretary,
-            judge=f"{'. '.join(tuple(part[0] for part in fio_judge[1:]))} {fio_judge[1]}"
+            judge=f"{' '.join(tuple(f'{part[0]}.' for part in fio_judge[1:]))} {fio_judge[0]}"
         )
 
         document_info = generate_pdf(data=data_for_pdf, filename=registration_number)
@@ -835,8 +835,8 @@ async def sql_edit_request(
         request_result = await session.execute(
             query
             .options(
-                so.joinedload(Request.secretary),
-                so.joinedload(Request.judge),
+                so.joinedload(Request.secretary).joinedload(Secretary.user),
+                so.joinedload(Request.judge).joinedload(Judge.user),
                 so.joinedload(Request.department)
             )
         )
@@ -903,7 +903,7 @@ async def sql_edit_request(
                 for item in item_names
             ],
             secretary=request.secretary.user.full_name,
-            judge=f"{'. '.join(tuple(part[0] for part in fio_judge[1:]))} {fio_judge[1]}"
+            judge=f"{' '.join(tuple(f'{part[0]}.' for part in fio_judge[1:]))} {fio_judge[0]}"
         )
 
         generate_pdf(data=data_for_pdf, filename=registration_number)
@@ -1979,8 +1979,8 @@ async def sql_get_data_request_for_sign_by_judge(
             )
             .options(
                 so.selectinload(Request.item_associations),
-                so.joinedload(Request.secretary),
-                so.joinedload(Request.judge),
+                so.joinedload(Request.secretary).joinedload(Secretary.user),
+                so.joinedload(Request.judge).joinedload(Judge.user),
                 so.joinedload(Request.department)
             )
         )
@@ -2000,7 +2000,7 @@ async def sql_get_data_request_for_sign_by_judge(
                 for association in request.item_associations
             ],
             secretary=request.secretary.user.full_name,
-            judge=f"{'. '.join(tuple(part[0] for part in fio_judge[1:]))} {fio_judge[1]}"
+            judge=f"{' '.join(tuple(f'{part[0]}.' for part in fio_judge[1:]))} {fio_judge[0]}"
         )
 
     except NoResultFound:
