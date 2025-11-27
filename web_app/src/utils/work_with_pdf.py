@@ -24,8 +24,8 @@ def generate_pdf(data: DocumentData, filename: str) -> DocumentResponse:
 
     else:
         file_path = f"{config.PDF_REQUESTS}/temp/{filename}.pdf"
-        data_dict["valid_from"] = data_dict["valid_from"].strftime("%d.%m.%Y")
-        data_dict["valid_until"] = data_dict["valid_until"].strftime("%d.%m.%Y")
+        data_dict["signature"]["valid_from"] = data_dict["signature"]["valid_from"].strftime("%d.%m.%Y")
+        data_dict["signature"]["valid_until"] = data_dict["signature"]["valid_until"].strftime("%d.%m.%Y")
 
     # Рендерим шаблон с помощью Jinja2
     template = Template(template_content)
