@@ -283,7 +283,7 @@ document.addEventListener('DOMContentLoaded', function() {
             actionPanel.style.display = 'block';
             buttonsHTML += `
                 <a class="btn btn-approve" href="/signature/${request.registration_number}">
-                    <i class="fa-solid fa-thumbs-up"></i> Утвердить
+                    <i class="fa-solid fa-thumbs-up"></i> Подписать и утвердить
                 </a>`;
         }
 
