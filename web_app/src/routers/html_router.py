@@ -8,7 +8,8 @@ from fastapi.templating import Jinja2Templates
 from web_app.src.dependencies import get_current_user, get_current_user_with_role
 from web_app.src.models import User, UserRole
 from web_app.src.utils import token_service, generate_password
-from web_app.src.crud import sql_update_password_user_by_id, sql_check_request_for_sign_by_judge
+from web_app.src.crud import (sql_update_password_user_by_id, sql_check_request_for_sign_by_judge,
+                              sql_get_email_department_from_judge_by_id)
 
 
 router = APIRouter()
@@ -205,8 +206,8 @@ async def reset_password(
 # Подтверждение смены пароля
 @router.get("/login/reset-password", response_class=HTMLResponse)
 async def reset_password(
-        request: Request,
-        token: Annotated[str, Field(strict=True, strip_whitespace=True)]
+    request: Request,
+    token: Annotated[str, Field(strict=True, strip_whitespace=True)]
 ):
     # Проверяем токен
     user_id = await token_service.get_reset_password_token(token)
@@ -229,3 +230,35 @@ async def reset_password(
         "password": new_password
     }
     return templates.TemplateResponse('update_password.html', context=context)
+
+
+# Создание аккаунта секретаря
+@router.get("/create-secretary", response_class=HTMLResponse)
+async def create_secretary(request: Request):
+    context = {"request": request}
+    return templates.TemplateResponse('create_secretary.html', context=context)
+
+
+# Подтверждение создания секретаря
+@router.get("/confirm-create-secretary", response_class=HTMLResponse)
+async def confirm_create_secretary(
+    request: Request,
+    token: Annotated[str, Field(strict=True, strip_whitespace=True)]
+):
+    data = await token_service.get_data_secretary(token=token)
+
+    if data is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
+
+    _, judge_name, department = await sql_get_email_department_from_judge_by_id(
+        judge_id=data["judge_id"]
+    )
+
+    context = {
+        "request": request,
+        "judge_name": judge_name,
+        "department": department,
+        "secretary_name": data["full_name"],
+        "username": data["username"]
+    }
+    return templates.TemplateResponse('confirm_create_secretary.html', context=context)

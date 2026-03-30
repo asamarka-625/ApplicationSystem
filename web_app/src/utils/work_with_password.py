@@ -24,7 +24,7 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 
-def create_reset_token():
+def create_secret_token():
     return secrets.token_urlsafe(32)
 
 

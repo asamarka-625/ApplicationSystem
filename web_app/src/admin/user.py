@@ -44,6 +44,7 @@ class UserAdmin(ModelView, model=User):
     column_formatters_detail = {
         User.role: lambda m, a: m.role.value.capitalize() if m.role else "Отсутствует",
         User.phone: lambda m, a: m.phone if m.phone else "Отсутствует",
+        User.email: lambda m, a: m.email if m.email else "Отсутствует",
         User.is_active: lambda m, a: "Активен" if m.is_active else "Неактивен",
         User.last_login: lambda m, a: m.last_login.strftime("%d.%m.%Y %H:%M") if m.last_login else "Не заходил"
     }

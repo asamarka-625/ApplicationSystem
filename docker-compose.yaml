@@ -14,6 +14,7 @@ services:
       - ./logs:/app/logs
       - ./web_app/src/static/user_documents:/app/web_app/src/static/user_documents
       - ./web_app/src/static/pdf_requests:/app/web_app/src/static/pdf_requests
+      - ./alembic:/app/alembic
     env_file:
       - .env
     logging:

@@ -81,13 +81,13 @@ def get_overdue_request_for_executor(
 # Создаем новую заявку
 @connection
 async def sql_create_request(
-        data: CreateRequest,
-        user_id: int,
-        secretary_id: int,
-        judge_id: int,
-        department_id: int,
-        fio_secretary: str,
-        session: AsyncSession
+    data: CreateRequest,
+    user_id: int,
+    secretary_id: int,
+    judge_id: int,
+    department_id: int,
+    fio_secretary: str,
+    session: AsyncSession
 ) -> str:
     try:
         request_type = next(

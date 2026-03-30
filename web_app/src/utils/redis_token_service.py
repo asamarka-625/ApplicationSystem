@@ -1,6 +1,7 @@
 # Внешние зависимости
-import redis.asyncio as redis
 from typing import Optional
+import json
+import redis.asyncio as redis
 # Внутренние модули
 from web_app.src.core import config
 
@@ -12,6 +13,7 @@ class TokenService:
         self.blacklist_prefix = "blacklist:"
         self.session_prefix = "access_token:"
         self.reset_password = "reset_password:"
+        self.secretary_data = "secretary_data:"
 
     async def init_redis(self):
         """Инициализация подключения к Redis"""
@@ -113,6 +115,34 @@ class TokenService:
 
         if user_id[0] is not None:
             return int(user_id[0])
+        return None
+
+    async def add_data_secretary(self, token: str, data: dict):
+        """Сохранение данных для добавления секретаря"""
+        key = f"{self.secretary_data}{token}"
+        await self.redis.setex(
+            key,
+            24 * 3600,
+            json.dumps(data)
+        )
+
+    async def get_data_secretary(self, token: str) -> Optional[dict]:
+        """Получение данных для добавления секретаря"""
+        data = await self.redis.get(f"{self.secretary_data}{token}")
+        if data:
+            return json.loads(data)
+
+        return None
+
+    async def get_and_del_data_secretary(self, token: str) -> Optional[dict]:
+        """Получение и удаление данных для добавления секретаря"""
+        key = f"{self.secretary_data}{token}"
+
+        async with self.redis.pipeline(transaction=True) as pipe:
+            data = await pipe.get(key).delete(key).execute()
+
+        if data[0] is not None:
+            return json.loads(data[0])
         return None
 
     async def get_stats(self) -> dict:

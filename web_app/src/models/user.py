@@ -42,9 +42,8 @@ class User(Base):
     )
     email: so.Mapped[str] = so.mapped_column(
         sa.String(255),
-        unique=True,
         index=True,
-        nullable=False
+        nullable=True
     )
     password_hash: so.Mapped[str] = so.mapped_column(
         sa.String(255),

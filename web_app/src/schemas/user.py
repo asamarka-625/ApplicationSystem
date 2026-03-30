@@ -23,4 +23,9 @@ class UserResponse(BaseModel):
 
 
 class PasswordResetRequest(BaseModel):
-    email: Annotated[str, Field(strict=True, strip_whitespace=True)]
+    email: Annotated[str, Field(strict=True, strip_whitespace=True, min_length=1)]
+
+
+# Схема запроса на проверку существования username
+class CheckUsernameRequest(BaseModel):
+    username: Annotated[str, Field(min_length=1)]
