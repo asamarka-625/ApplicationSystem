@@ -2,7 +2,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from sqladmin import Admin
 from prometheus_fastapi_instrumentator import Instrumentator
 # Внутренние модули
@@ -37,9 +36,7 @@ async def lifespan(app: FastAPI):
     await shutdown()
 
 
-app = FastAPI(lifespan=lifespan)
-
-app.mount("/static", StaticFiles(directory="web_app/src/static"), name="static")
+app = FastAPI(lifespan=lifespan, docs_url="/api/docs", root_path="/u8ufy1")
 
 # Подключение маршрутов
 app.include_router(router)
@@ -47,13 +44,13 @@ app.include_router(router)
 # Настройка CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[config.FRONTEND_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.add_middleware(AuthenticationMiddleware, login_url="/login")
+app.add_middleware(AuthenticationMiddleware, login_url="/u8ufy1/login")
 
 # Метрики /metrics
 instrumentator = Instrumentator()

@@ -1,5 +1,5 @@
-const API_URL = '/api/v1/request/view';
-const API_BASE_URL = '/api/v1';
+const API_URL = '/u8ufy1/api/v1/request/view';
+const API_BASE_URL = '/u8ufy1/api/v1';
 
 let currentRejectId = null;
 let currentEvent = null;
@@ -274,7 +274,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (rights.edit && request.rights.edit) {
             actionPanel.style.display = 'block';
             buttonsHTML += `
-                <a class="btn btn-edit" href="/request/${request.registration_number}/edit">
+                <a class="btn btn-edit" href="/u8ufy1/request/${request.registration_number}/edit">
                     <i class="fa-solid fa-pen-to-square"></i> Редактировать
                 </a>`;
         }
@@ -282,7 +282,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (rights.approve && request.rights.approve) {
             actionPanel.style.display = 'block';
             buttonsHTML += `
-                <a class="btn btn-approve" href="/signature/${request.registration_number}">
+                <a class="btn btn-approve" href="/u8ufy1/signature/${request.registration_number}">
                     <i class="fa-solid fa-thumbs-up"></i> Подписать и утвердить
                 </a>`;
         }
@@ -290,7 +290,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (rights.redirect_management_department && request.rights.redirect_management_department) {
             actionPanel.style.display = 'block';
             buttonsHTML += `
-                <a class="btn btn-redirect" href="/request/${request.registration_number}/redirect/management">
+                <a class="btn btn-redirect" href="/u8ufy1/request/${request.registration_number}/redirect/management">
                     <i class="fa-solid fa-calendar-check"></i> Назначить сотрудника управления
                 </a>`;
         }

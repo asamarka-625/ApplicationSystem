@@ -1,5 +1,5 @@
-const API_URL = '/api/v1/request/view';
-const API_BASE_URL = '/api/v1/request';
+const API_URL = '/u8ufy1/api/v1/request/view';
+const API_BASE_URL = '/u8ufy1/api/v1/request';
 
 let currentPage = 1;
 let pageSize = 10;
@@ -171,7 +171,7 @@ function displayRequests(data) {
             <td>${request.is_emergency ? '<span class="emergency-badge">Аварийная</span>' : 'Обычная'}</td>
             <td>${formatDate(request.created_at)}</td>
             <td>
-                <a class="btn btn-view-details" href="/request/${request.registration_number}">
+                <a class="btn btn-view-details" href="/u8ufy1/request/${request.registration_number}">
                     <i class="fas fa-eye"></i> Просмотр
                 </a>
             </td>
@@ -253,7 +253,7 @@ async function exportToExcel() {
         downloadBtn.disabled = true;
 
         // Выполняем запрос
-        const response = await fetch(`/api/v1/download/requests?${params.toString()}`, {
+        const response = await fetch(`/u8ufy1/api/v1/download/requests?${params.toString()}`, {
             method: 'GET'
         });
 

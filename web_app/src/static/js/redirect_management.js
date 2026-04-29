@@ -1,5 +1,5 @@
-const API_URL = '/api/v1/request/create';
-const API_BASE_URL = '/api/v1/request';
+const API_URL = '/u8ufy1/api/v1/request/create';
+const API_BASE_URL = '/u8ufy1/api/v1/request';
 
 function getRegistrationNumberFromUrl() {
     const url = window.location.href;
@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', function() {
             await submitManagementAssignment(registrationNumber, managementId, managementComment);
 
             showNotification('Сотрудник успешно назначен', 'success');
-            window.location.href = `/request/${registrationNumber}`;
+            window.location.href = `/u8ufy1/request/${registrationNumber}`;
 
         } catch (error) {
             console.error('Ошибка:', error);

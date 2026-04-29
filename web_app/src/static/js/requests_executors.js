@@ -1,5 +1,5 @@
-const API_URL = '/api/v1/request/view';
-const API_BASE_URL = '/api/v1/request';
+const API_URL = '/u8ufy1/api/v1/request/view';
+const API_BASE_URL = '/u8ufy1/api/v1/request';
 
 let currentPage = 1;
 let pageSize = 10;

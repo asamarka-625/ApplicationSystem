@@ -153,7 +153,7 @@ function displayRequests(data) {
             <td>
                 <div style="display: flex; flex-direction: column; gap: 5px; width: max-content; text-align: center;">
                     ${rights.view && request.rights.view ? `
-                        <a class="btn btn-view-details" href="/request/${request.registration_number}">
+                        <a class="btn btn-view-details" href="/u8ufy1/request/${request.registration_number}">
                             <i class="fas fa-eye"></i> Просмотр
                         </a>` : ''}
                     ${rights.ready && request.rights.ready ? `
@@ -174,7 +174,7 @@ async function exportToExcel() {
         const params = new URLSearchParams();
         if (departmentFilter) params.append('department', departmentFilter);
 
-        const response = await fetch(`/api/v1/download/planning?${params.toString()}`);
+        const response = await fetch(`/u8ufy1/api/v1/download/planning?${params.toString()}`);
         if (response.ok) {
             // Скачиваем файл
             const blob = await response.blob();

@@ -1,4 +1,4 @@
-const API_BASE_URL = '/api/v1/request/create';
+const API_BASE_URL = '/u8ufy1/api/v1/request/create';
 
 // Переменная для хранения данных о типах заявок
 let requestTypes = [];
@@ -158,7 +158,7 @@ async function handleRequestSubmit(e) {
         if (response.ok) {
             showNotification('Заявка успешно создана!');
             resetForm();
-            window.location.href = '/requests';
+            window.location.href = '/u8ufy1/requests';
 
         } else {
             throw new Error('Ошибка создания заявки');

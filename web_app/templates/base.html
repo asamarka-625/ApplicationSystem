@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
-    <link rel="stylesheet" href="/static/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/u8ufy1/static/css/all.min.css">
+    <link rel="stylesheet" href="/u8ufy1/static/css/styles.css">
     {% if page in ("create", "edit") %}
-    <link rel="stylesheet" href="/static/css/create.css">
+    <link rel="stylesheet" href="/u8ufy1/static/css/create.css">
     {% elif page == "detail" %}
-    <link rel="stylesheet" href="/static/css/detail.css">
+    <link rel="stylesheet" href="/u8ufy1/static/css/detail.css">
     {% elif page == "signature" %}
-    <link rel="stylesheet" href="/static/css/signature.css">
+    <link rel="stylesheet" href="/u8ufy1/static/css/signature.css">
     {% endif %}
 </head>
 <body>
@@ -40,13 +40,13 @@
                 <ul>
                     {% if role == 'SECRETARY' %}
                     <li class="nav-item">
-                        <a href="/requests" class="nav-link">
+                        <a href="/u8ufy1/requests" class="nav-link">
                             <i class="fas fa-list-alt"></i>
                             <span>Мои заявки</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="/create" class="nav-link">
+                        <a href="/u8ufy1/create" class="nav-link">
                             <i class="fas fa-plus-circle"></i>
                             <span>Создать заявку</span>
                         </a>
@@ -54,7 +54,7 @@
                     {% endif %}
                     {% if role == 'JUDGE' %}
                     <li class="nav-item">
-                        <a href="/requests" class="nav-link">
+                        <a href="/u8ufy1/requests" class="nav-link">
                             <i class="fas fa-list-alt"></i>
                             <span>Заявки секретаря</span>
                         </a>
@@ -62,7 +62,7 @@
                     {% endif %}
                     {% if role in ('EXECUTOR', 'EXECUTOR_ORGANIZATION') %}
                     <li class="nav-item">
-                        <a href="/requests" class="nav-link">
+                        <a href="/u8ufy1/requests" class="nav-link">
                             <i class="fas fa-list-alt"></i>
                             <span>Заявки на исполнения</span>
                         </a>
@@ -70,7 +70,7 @@
                     {% endif %}
                     {% if role == 'MANAGEMENT' %}
                     <li class="nav-item">
-                        <a href="/requests" class="nav-link">
+                        <a href="/u8ufy1/requests" class="nav-link">
                             <i class="fas fa-list-alt"></i>
                             <span>Все Заявки</span>
                         </a>
@@ -78,14 +78,14 @@
                     {% endif %}
                     {% if role == 'MANAGEMENT_DEPARTMENT' %}
                     <li class="nav-item">
-                        <a href="/requests" class="nav-link">
+                        <a href="/u8ufy1/requests" class="nav-link">
                             <i class="fa-solid fa-box-archive"></i>
                             <span>Заявки</span>
                         </a>
                     {% endif %}
                     {% if role in ('MANAGEMENT', 'MANAGEMENT_DEPARTMENT', 'EXECUTOR', 'EXECUTOR_ORGANIZATION') %}
                     <li class="nav-item">
-                        <a href="/planning" class="nav-link">
+                        <a href="/u8ufy1/planning" class="nav-link">
                             <i class="fa-solid fa-box-archive"></i>
                             <span>Планирование</span>
                         </a>
@@ -93,7 +93,7 @@
                     {% endif %}
                     {% if role == '' %}
                     <li class="nav-item">
-                        <a href="/login" class="nav-link">
+                        <a href="/u8ufy1/login" class="nav-link">
                             <i class="fas fa-book"></i>
                             <span>Вход</span>
                         </a>
@@ -116,26 +116,26 @@
         </div>
     </div>
 
-	<script src="/static/js/app.js"></script>
+	<script src="/u8ufy1/static/js/app.js"></script>
     {% if page == "create" %}
-    <script src="/static/js/create.js"></script>
+    <script src="/u8ufy1/static/js/create.js"></script>
     {% elif page == "requests" %}
-    <script src="/static/js/requests.js"></script>
+    <script src="/u8ufy1/static/js/requests.js"></script>
     {% elif page == "detail" %}
-    <script src="/static/js/detail.js"></script>
+    <script src="/u8ufy1/static/js/detail.js"></script>
     {% elif page == "edit" %}
-    <script src="/static/js/edit.js"></script>
+    <script src="/u8ufy1/static/js/edit.js"></script>
     {% elif page == "redirect_executor" %}
-    <script src="/static/js/redirect_executor.js"></script>
+    <script src="/u8ufy1/static/js/redirect_executor.js"></script>
     {% elif page == "redirect_management" %}
-    <script src="/static/js/redirect_management.js"></script>
+    <script src="/u8ufy1/static/js/redirect_management.js"></script>
     {% elif page == "requests_executors" %}
-    <script src="/static/js/requests_executors.js"></script>
+    <script src="/u8ufy1/static/js/requests_executors.js"></script>
     {% elif page == "planning" %}
-    <script src="/static/js/planning.js"></script>
+    <script src="/u8ufy1/static/js/planning.js"></script>
     {% elif page == "signature" %}
     <script language="javascript" src="https://www.cryptopro.ru/sites/default/files/products/cades/cadesplugin_api.js"></script>
-    <script src="/static/js/signature.js"></script>
+    <script src="/u8ufy1/static/js/signature.js"></script>
     {% endif %}
 </body>
 </html>

@@ -8,7 +8,7 @@ from web_app.src.core import config
 
 # Отправка email для восстановления пароля
 def send_password_reset_email(to_email: str, reset_token: str, username: str):
-    reset_link = f"{config.FRONTEND_URL}/login/reset-password?token={reset_token}"
+    reset_link = f"{config.FRONTEND_URL}/u8ufy1/login/reset-password?token={reset_token}"
 
     # HTML шаблон письма
     html_template = """
@@ -105,7 +105,7 @@ def send_confirm_create_secretary_email(
     judge_name: str,
     secretary_name: str
 ):
-    confirm_link = f"{config.FRONTEND_URL}/confirm-create-secretary?token={confirm_token}"
+    confirm_link = f"{config.FRONTEND_URL}/u8ufy1/confirm-create-secretary?token={confirm_token}"
 
     # HTML шаблон письма
     html_template = """

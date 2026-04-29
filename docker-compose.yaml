@@ -1,8 +1,11 @@
 services:
   web:
-    build: .
-    ports:
-      - "8000:8000"
+    build:
+      context: .
+      network: host
+      args:
+        - http_proxy=http://127.0.0.1:10808
+        - https_proxy=http://127.0.0.1:10808
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     depends_on:
@@ -89,8 +92,6 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
-    ports:
-      - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
@@ -98,6 +99,17 @@ services:
       - ./grafana/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
       - ./grafana/grafana.ini:/etc/grafana/grafana.ini
       - grafanadata:/var/lib/grafana
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8081:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./web_app/src/static:/app/static:ro
+    depends_on:
+      - web
+    restart: unless-stopped
 
 volumes:
   postgres_data:

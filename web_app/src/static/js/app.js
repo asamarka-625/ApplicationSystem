@@ -26,7 +26,7 @@ function formatDate(dateString, full=true) {
 
 async function logout() {
     try {
-        const response = await fetch('/logout', {
+        const response = await fetch('/u8ufy1/logout', {
             method: 'POST',
             credentials: 'include'  // Важно для отправки кук
         });
@@ -35,7 +35,7 @@ async function logout() {
             // Очищаем localStorage на всякий случай
             localStorage.removeItem('access_token');
             // Перенаправляем на страницу логина
-            window.location.href = '/login';
+            window.location.href = '/u8ufy1/login';
         } else {
             alert('Logout failed!');
         }

@@ -1,5 +1,5 @@
 // Глобальные переменные
-const API_BASE = '/api/v1/signature';
+const API_BASE = '/u8ufy1/api/v1/signature';
 
 let registrationNumber = null;
 let currentFileUrl = null;
@@ -31,8 +31,6 @@ function initializePlugin() {
         cadespluginLoaded = true;
         statusDiv.innerHTML = '<div class="status success">Плагин успешно инициализирован!</div>';
         document.getElementById('loadCertsBtn').disabled = false;
-        getRegistrationNumberFromUrl();
-        backRequest.href = `/request/${registrationNumber}`;
 
     }).catch(function(err) {
         statusDiv.innerHTML = `<div class="status error">Ошибка инициализации плагина: ${err.message}</div>`;
@@ -342,6 +340,9 @@ function getFileNameFromUrl(url) {
 
 // Автоматическая инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
+    getRegistrationNumberFromUrl();
+    backRequest.href = `/u8ufy1/request/${registrationNumber}`;
+
     if (typeof cadesplugin !== 'undefined') {
         initializePlugin();
     } else {

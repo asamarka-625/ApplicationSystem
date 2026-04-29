@@ -1,5 +1,5 @@
-const API_URL = '/api/v1/request/create';
-const API_BASE_URL = '/api/v1/request';
+const API_URL = '/u8ufy1/api/v1/request/create';
+const API_BASE_URL = '/u8ufy1/api/v1/request';
 
 // Переменная для хранения данных о типах заявок
 let requestTypes = [];
@@ -510,7 +510,7 @@ async function handleRequestSubmit(e) {
 
         if (response.ok) {
             showNotification('Заявка успешно обновлена!');
-            window.location.href = `/request/${registrationNumber}`;
+            window.location.href = `/u8ufy1/request/${registrationNumber}`;
         } else {
             const errorText = await response.text();
             throw new Error(errorText || 'Ошибка обновления заявки');

@@ -35,7 +35,7 @@ def generate_pdf(data: DocumentData, filename: str) -> DocumentResponse:
     HTML(string=rendered_html, encoding='utf-8').write_pdf(file_path)
 
     return DocumentResponse(
-        file_url=file_path.replace("web_app/src", "")
+        file_url=f"/u8ufy1/{file_path.replace("web_app/src", "")}"
     )
 
 
@@ -90,5 +90,5 @@ async def save_pdf_signed(file: UploadFile, filename: str) -> DocumentResponse:
         os.remove(temp_file_path)
 
     return DocumentResponse(
-        file_url=file_path.replace("web_app/src", "")
+        file_url=f"/u8ufy1/{file_path.replace("web_app/src", "")}"
     )

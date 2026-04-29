@@ -610,9 +610,9 @@ async def sql_get_planning_requests(
 # Выводим подробную информацию о заявке
 @connection
 async def sql_get_request_details(
-        registration_number: str,
-        user: User,
-        session: AsyncSession
+    registration_number: str,
+    user: User,
+    session: AsyncSession
 ) -> RequestDetailResponse:
     try:
         role = user.role
@@ -704,12 +704,12 @@ async def sql_get_request_details(
             updated_at=request.update_at,
             completed_at=request.completed_at,
             is_emergency=request.is_emergency,
-            pdf_request=request.pdf_signed_request_url if request.pdf_signed_request_url else request.pdf_request_url,
+            pdf_request=f"/u8ufy1{request.pdf_signed_request_url if request.pdf_signed_request_url else request.pdf_request_url}".replace("/src", ""),
             attachments=[
                 AttachmentsRequest(
                     file_name=attachment.file_name,
                     content_type=attachment.document_type,
-                    file_path=attachment.file_path.replace("web_app/src", ""),
+                    file_path=f"/u8ufy1{attachment.file_path.replace("web_app/src", "")}",
                     size=attachment.size
                 )
                 for attachment in request.related_documents
@@ -765,8 +765,8 @@ async def sql_get_request_details(
 # Данные заявки
 @connection
 async def sql_get_request_data(
-        registration_number: str,
-        session: AsyncSession
+    registration_number: str,
+    session: AsyncSession
 ) -> RequestDataResponse:
     try:
         request_result = await session.execute(
