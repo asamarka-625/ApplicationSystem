@@ -412,3 +412,26 @@ async def sql_add_user_judge(
     except Exception as e:
         config.logger.error(f"Unexpected error add user_judge: {e}")
 
+
+# Добавляем нового пользователя
+@connection
+async def sql_add_user(
+    data: dict,
+    session: AsyncSession
+) -> None:
+    try:
+        new_user = User(
+            username=data["username"],
+            email=data["email"],
+            full_name=data["full_name"],
+            password_hash=data["password_hash"]
+        )
+        session.add(new_user)
+
+        await session.commit()
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error add user: {e}")
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error add user: {e}")

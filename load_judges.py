@@ -5,8 +5,6 @@ import secrets
 import asyncio
 from passlib.context import CryptContext
 import pandas as pd
-from sqlalchemy.util import await_only
-
 # Внутренние модули
 from web_app.src.crud import sql_add_user_judge
 
