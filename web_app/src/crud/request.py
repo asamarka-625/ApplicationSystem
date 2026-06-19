@@ -704,7 +704,7 @@ async def sql_get_request_details(
             updated_at=request.update_at,
             completed_at=request.completed_at,
             is_emergency=request.is_emergency,
-            pdf_request=f"/u8ufy1{request.pdf_signed_request_url if request.pdf_signed_request_url else request.pdf_request_url}".replace("/src", ""),
+            pdf_request=f"{request.pdf_signed_request_url if request.pdf_signed_request_url else request.pdf_request_url}".replace("/src/", ""),
             attachments=[
                 AttachmentsRequest(
                     file_name=attachment.file_name,
