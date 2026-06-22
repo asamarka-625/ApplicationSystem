@@ -149,7 +149,7 @@ class RequestDetailResponse(BaseModel):
     description: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
     description_management_department: Optional[Annotated[str, Field(strict=True, strip_whitespace=True)]]
     department_name: Annotated[str, Field(strict=True, strip_whitespace=True)]
-    secretary: UserResponse
+    secretary: Optional[UserResponse]
     judge: UserResponse
     management: Optional[UserResponse]
     management_department: Optional[UserResponse]

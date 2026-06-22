@@ -335,7 +335,19 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('for_description_management').style = '';
         }
         document.getElementById('department').textContent = request.department_name;
-        document.getElementById('secretary_name').textContent = request.secretary.name;
+
+        if (request.secretary) {
+            document.getElementById('secretary_name').textContent = request.secretary.name;
+
+            const secretary_button = document.getElementById('secretary_name');
+            secretary_button.classList.add('btn-info');
+            secretary_button.addEventListener('click', () => {
+                openUserModal(request.secretary.id);
+            });
+        } else {
+            document.getElementById('secretary_name').style.display = "none";
+        }
+
         document.getElementById('judge_name').textContent = request.judge.name;
         document.getElementById('management_name').textContent = request.management ? request.management.name : 'Не назначен';
         document.getElementById('management_department_name').textContent = request.management_department ? request.management_department.name : 'Не назанчен';
@@ -351,12 +363,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Срочность
         document.getElementById('emergency').innerHTML = request.is_emergency ?
             '<span class="emergency-badge">Аварийная</span>' : '<span>Обычная</span>';
-
-        const secretary_button = document.getElementById('secretary_name');
-        secretary_button.classList.add('btn-info');
-        secretary_button.addEventListener('click', () => {
-            openUserModal(request.secretary.id);
-        });
 
         const judge_button = document.getElementById('judge_name');
         judge_button.classList.add('btn-info');

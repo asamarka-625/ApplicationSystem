@@ -125,7 +125,7 @@ class Request(Base):
     secretary_id: so.Mapped[int] = so.mapped_column(
         sa.Integer,
         sa.ForeignKey("secretaries.id"),
-        nullable=False,
+        nullable=True,
         index=True
     )
     judge_id: so.Mapped[int] = so.mapped_column(

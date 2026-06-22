@@ -687,7 +687,7 @@ async def sql_get_request_details(
             secretary=UserResponse(
                 id=request.secretary.user.id,
                 name=request.secretary.user.full_name
-            ),
+            ) if request.secretary else None,
             judge=UserResponse(
                 id=request.judge.user.id,
                 name=request.judge.user.full_name

@@ -119,10 +119,10 @@ async def create_request(
     request_type: int = Form(...),
     attachments: Optional[List[UploadFile]] = File(None),
     current_user: User = Depends(
-        get_current_user_with_role((UserRole.SECRETARY,))
+        get_current_user_with_role((UserRole.SECRETARY, UserRole.JUDGE))
     )
 ):
-    if not current_user.is_secretary:
+    if not (current_user.is_secretary or current_user.is_judge):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough rights")
 
     items_list = []
@@ -152,13 +152,25 @@ async def create_request(
     request_data.attachments = files_info
 
     try:
+        if current_user.is_secretary:
+            profiles_data = {
+                "secretary_id": current_user.secretary_profile.id,
+                "judge_id": current_user.secretary_profile.judge_id,
+                "department_id": current_user.secretary_profile.department_id,
+            }
+
+        else:
+            profiles_data = {
+                "secretary_id": None,
+                "judge_id": current_user.judge_profile.id,
+                "department_id": current_user.judge_profile.department_id,
+            }
+
         request_id = await sql_create_request(
             data=request_data,
             user_id=current_user.id,
-            secretary_id=current_user.secretary_profile.id,
-            judge_id=current_user.secretary_profile.judge_id,
-            department_id=current_user.secretary_profile.department_id,
-            fio_secretary=current_user.full_name
+            fio_secretary=current_user.full_name,
+            **profiles_data
         )
 
     except:
